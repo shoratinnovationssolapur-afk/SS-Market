@@ -1,7 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Make sure this is imported
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // 1. FIX: Define the variable here so the build method can see it
+  String? userName;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserName();
+  }
+
+  void _fetchUserName() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        // Fallback: DisplayName -> Email prefix -> Trader
+        userName = user.displayName ?? user.email?.split('@')[0] ?? "Trader";
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,7 +37,10 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 60),
-            _buildHeader(),
+
+            // 2. FIX: Only call this ONCE and pass the name variable
+            _buildHeader(userName ?? "Trader"),
+
             const SizedBox(height: 30),
             _buildPortfolioCard(),
             const SizedBox(height: 30),
@@ -28,15 +56,16 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
-    return const Row(
+  // 3. FIX: Ensure the header accepts the String argument
+  Widget _buildHeader(String name) {
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text("Hello, Leo", style: TextStyle(color: Colors.white70, fontSize: 16)),
-          Text("Welcome Back", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+          const Text("Hello,", style: TextStyle(color: Colors.white70, fontSize: 16)),
+          Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
         ]),
-        CircleAvatar(
+        const CircleAvatar(
           radius: 25,
           backgroundColor: Colors.white10,
           child: Icon(Icons.person_outline, color: Colors.white),
@@ -45,46 +74,32 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  // ... keep your existing _buildPortfolioCard, _infoTile, and _stockItem below
   Widget _buildPortfolioCard() {
     return Container(
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
           colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)],
         ),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFF00D2FF).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10)),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text("Net Worth", style: TextStyle(color: Colors.white70, fontSize: 16)),
-          const Text("\$27,450.50",
-              style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
+          const Text("\$27,450.50", style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
           const SizedBox(height: 25),
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _infoTile("Profit", "+\$2,100"),
-              _infoTile("Loss", "-\$340"),
-              _infoTile("Growth", "+12.4%"),
+              Column(children: [Text("Profit", style: TextStyle(color: Colors.white60)), Text("+\$2,100")]),
+              Column(children: [Text("Loss", style: TextStyle(color: Colors.white60)), Text("-\$340")]),
+              Column(children: [Text("Growth", style: TextStyle(color: Colors.white60)), Text("+12.4%")]),
             ],
           )
         ],
       ),
-    );
-  }
-
-  Widget _infoTile(String label, String value) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-      ],
     );
   }
 
@@ -95,22 +110,18 @@ class HomeScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: Colors.white10,
-            child: Icon(icon, color: Colors.white, size: 20),
-          ),
+          CircleAvatar(backgroundColor: Colors.white10, child: Icon(icon, color: Colors.white)),
           const SizedBox(width: 15),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+            Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
             Text(sym, style: const TextStyle(color: Colors.white38)),
           ]),
           const Spacer(),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(price, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            Text(price, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             Text(change, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
           ]),
         ],
