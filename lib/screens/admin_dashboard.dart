@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'admin_pages.dart';
 import 'login.dart';
+import '../services/share_data_service.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -31,12 +32,30 @@ class AdminDashboard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (!isMobile) _buildTopBar(),
+                    if (!isMobile) _buildTopBar(context),
                     const SizedBox(height: 32),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSectionHeader("Trending"),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildSectionHeader("Trending", onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const ShareHistoryPage()));
+                            }),
+                            if (isMobile)
+                              ElevatedButton.icon(
+                                onPressed: () => _showAddShareDialog(context),
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text("Add Share"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                          ],
+                        ),
                         const SizedBox(height: 16),
                         LayoutBuilder(builder: (context, constraints) {
                           return Wrap(
@@ -90,7 +109,9 @@ class AdminDashboard extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildSectionHeader("My portfolio"),
+                                    _buildSectionHeader("My portfolio", onTap: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (context) => const PortfolioPage()));
+                                    }),
                                     const SizedBox(height: 16),
                                     _buildPortfolioSummary("Gain", "+1,657.00 USD", Icons.trending_up, Colors.greenAccent),
                                     const SizedBox(height: 12),
@@ -110,7 +131,9 @@ class AdminDashboard extends StatelessWidget {
                         ),
                         if (isMobile) ...[
                           const SizedBox(height: 32),
-                          _buildSectionHeader("My portfolio"),
+                          _buildSectionHeader("My portfolio", onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const PortfolioPage()));
+                          }),
                           const SizedBox(height: 16),
                           _buildPortfolioSummary("Gain", "+1,657.00 USD", Icons.trending_up, Colors.greenAccent),
                           const SizedBox(height: 12),
@@ -129,6 +152,87 @@ class AdminDashboard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAddShareDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final symController = TextEditingController();
+    final currentController = TextEditingController();
+    final pastController = TextEditingController();
+    final futureController = TextEditingController();
+    final valuationController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161B22),
+        title: const Text("Add New Share", style: TextStyle(color: Colors.white)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDialogField("Share Name", Icons.business, nameController),
+              _buildDialogField("Symbol (e.g. AAPL)", Icons.short_text, symController),
+              _buildDialogField("Current Price", Icons.attach_money, currentController),
+              _buildDialogField("Past Price", Icons.history, pastController),
+              _buildDialogField("Future Prediction", Icons.online_prediction, futureController),
+              _buildDialogField("Company Valuation", Icons.account_balance, valuationController),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isEmpty || symController.text.isEmpty) return;
+              
+              ShareDataService().addShare({
+                "name": nameController.text,
+                "sym": symController.text.toUpperCase(),
+                "current": "\$${currentController.text}",
+                "past": "\$${pastController.text}",
+                "future": "\$${futureController.text}",
+                "valuation": valuationController.text,
+                "date": "Oct 25, 2023" // In a real app, use DateTime.now()
+              });
+
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Share details added successfully!")),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+            child: const Text("Save Share", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogField(String label, IconData icon, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: controller,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.grey),
+          prefixIcon: Icon(icon, color: Colors.blueAccent, size: 20),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Colors.blueAccent),
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
       ),
     );
   }
@@ -234,7 +338,7 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(BuildContext context) {
     return Row(
       children: [
         const Text("Dashboard", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
@@ -249,6 +353,18 @@ class AdminDashboard extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 24),
+        ElevatedButton.icon(
+          onPressed: () => _showAddShareDialog(context),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text("Add Share"),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blueAccent,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(width: 24),
         const Icon(Icons.notifications_outlined, color: Colors.grey),
         const SizedBox(width: 24),
         const CircleAvatar(radius: 18, backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=admin')),
@@ -256,12 +372,15 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {VoidCallback? onTap}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-        TextButton(onPressed: () {}, child: const Text("View All", style: TextStyle(color: Colors.grey, fontSize: 12))),
+        TextButton(
+          onPressed: onTap ?? () {}, 
+          child: const Text("View All", style: TextStyle(color: Colors.grey, fontSize: 12)),
+        ),
       ],
     );
   }

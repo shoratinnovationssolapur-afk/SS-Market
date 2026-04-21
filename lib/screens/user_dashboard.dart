@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'user_pages.dart';
 import 'login.dart';
+import 'expert_suggestions.dart';
 
 class UserDashboard extends StatelessWidget {
   const UserDashboard({super.key});
@@ -31,6 +32,8 @@ class UserDashboard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (!isMobile) _buildTopBar(),
+                    const SizedBox(height: 32),
+                    _buildExpertBanner(context),
                     const SizedBox(height: 32),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,6 +118,55 @@ class UserDashboard extends StatelessWidget {
     );
   }
 
+  Widget _buildExpertBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Expert Market Signals",
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Unlock premium buy/sell suggestions from our analyst for just ₹20/day.",
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const ExpertSuggestionsPage()));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF3A7BD5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Unlock Now", style: TextStyle(fontWeight: FontWeight.bold)),
+                )
+              ],
+            ),
+          ),
+          const SizedBox(width: 20),
+          const Icon(Icons.insights_rounded, color: Colors.white, size: 80),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSidebar(BuildContext context) {
     bool isMobile = MediaQuery.of(context).size.width < 1100;
     
@@ -135,13 +187,15 @@ class UserDashboard extends StatelessWidget {
           _navItem(context, Icons.dashboard_rounded, "Dashboard", active: true, onTap: () {
             if (isMobile) Navigator.pop(context);
           }),
+          _navItem(context, Icons.insights_rounded, "Expert Signals", onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const ExpertSuggestionsPage()));
+          }),
           _navItem(context, Icons.explore_outlined, "Market", onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const UserMarketPage()));
           }),
           _navItem(context, Icons.pie_chart_outline, "Portfolio", onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPortfolioPage()));
           }),
-          _navItem(context, Icons.notifications_none, "Alerts", onTap: () {}),
           _navItem(context, Icons.settings_outlined, "Settings", onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const UserSettingsPage()));
           }),

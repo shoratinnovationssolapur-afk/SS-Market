@@ -1,5 +1,81 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+import '../services/share_data_service.dart';
+
+class ShareHistoryPage extends StatelessWidget {
+  const ShareHistoryPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1117),
+      appBar: AppBar(
+        title: const Text("Share Entry History"),
+        backgroundColor: const Color(0xFF161B22),
+      ),
+      body: ValueListenableBuilder<List<Map<String, String>>>(
+        valueListenable: ShareDataService().shares,
+        builder: (context, shares, _) {
+          if (shares.isEmpty) {
+            return const Center(child: Text("No shares added yet.", style: TextStyle(color: Colors.grey)));
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: shares.length,
+            itemBuilder: (context, index) {
+              final share = shares[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF161B22),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(share["name"] ?? "N/A", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(share["date"] ?? "", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(share["sym"] ?? "", style: const TextStyle(color: Colors.cyanAccent, fontSize: 14)),
+                    const Divider(height: 32, color: Colors.white10),
+                    Row(
+                      children: [
+                        _historyStat("Current", share["current"] ?? ""),
+                        _historyStat("Past", share["past"] ?? ""),
+                        _historyStat("Future Pred.", share["future"] ?? ""),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _historyStat("Company Valuation", share["valuation"] ?? ""),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _historyStat(String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+}
 
 class MarketPage extends StatelessWidget {
   const MarketPage({super.key});

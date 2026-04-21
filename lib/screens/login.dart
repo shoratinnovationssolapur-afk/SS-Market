@@ -44,9 +44,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text("Welcome Back",
                     style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 10),
-                const Text("Admin: admin@ss.com / admin123\nUser: user@ss.com / user123",
+                const Text(
+                    "\"The goal of a successful trader is to make the best trades. Money is secondary.\"",
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    style: TextStyle(color: Colors.white70, fontSize: 14, fontStyle: FontStyle.italic)),
                 const SizedBox(height: 40),
                 _buildGlassInput("Email Address", Icons.alternate_email_rounded, controller: _emailController),
                 const SizedBox(height: 20),
