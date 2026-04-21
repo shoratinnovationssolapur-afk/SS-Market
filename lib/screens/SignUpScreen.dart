@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import '../services/auth.dart';
+import 'package:ss_market/services/auth.dart'; // Import the helper above
 import 'dashboard.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -16,21 +16,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isObscure = true;
   bool _isLoading = false;
 
+
   void _handleSignUp() async {
+    // Basic validation
+    if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
+
+    // FIX: Pass the 3rd argument (_nameController.text)
     final user = await AuthService().signUp(
       _emailController.text.trim(),
       _passwordController.text.trim(),
-      _nameController.text.trim(),
+      _nameController.text.trim(), // <--- This was missing!
     );
-    
-    if (!mounted) return;
+
     setState(() => _isLoading = false);
 
     if (user != null) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (context) => const HomeScreen()));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Signup Failed")));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Signup Failed. Email may be invalid or already in use.")));
     }
   }
 
@@ -39,15 +51,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          Hero(
-            tag: 'globe_morph',
-            child: Positioned(
-              top: -100, right: -100,
-              child: Container(
-                width: 450, height: 450,
+          // Globe Background (Matches Login)
+// Inside your Scaffold body: Stack(children: [ ... ])
+
+          Positioned( // 1. Positioned stays on the OUTSIDE
+            top: -100,
+            left: -100,
+            child: Hero( // 2. Hero goes INSIDE Positioned
+              tag: 'globe_morph',
+              child: Container( // 3. The actual content/styling goes INSIDE the Hero
+                width: 450,
+                height: 450,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF92FE9D)]),
+                  gradient: LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)]),
                 ),
               ),
             ),
