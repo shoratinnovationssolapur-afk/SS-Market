@@ -1,52 +1,30 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:ss_market/services/auth.dart';
+import 'package:ss_market/services/auth.dart'; // Import the helper above
 import 'dashboard.dart';
-import 'SignUpScreen.dart';    // Import your signup screen
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  // 1. Add Controllers to capture text
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
+class _SignUpScreenState extends State<SignUpScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
   bool _isObscure = true;
   bool _isLoading = false;
 
-  // 2. Login Logic Function
-  void _handleLogin() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill in all fields")),
-      );
-      return;
-    }
-
+  void _handleSignUp() async {
     setState(() => _isLoading = true);
-
-    final user = await AuthService().signIn(
-        _emailController.text.trim(),
-        _passwordController.text.trim()
-    );
-
+    final user = await AuthService().signUp(_emailController.text, _passwordController.text);
     setState(() => _isLoading = false);
 
     if (user != null) {
-      // Success: Navigate to Dashboard
-      Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen())
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
     } else {
-      // Failure: Show error
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid Email or Password")),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Signup Failed")));
     }
   }
 
@@ -55,16 +33,16 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Globe transformation background
+          // Globe Background (Matches Login)
           Hero(
             tag: 'globe_morph',
             child: Positioned(
-              top: -100, left: -100,
+              top: -100, right: -100, // Slightly shifted for visual variety
               child: Container(
                 width: 450, height: 450,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)]),
+                  gradient: LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF92FE9D)]),
                 ),
               ),
             ),
@@ -73,16 +51,16 @@ class _LoginScreenState extends State<LoginScreen> {
             filter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
             child: Container(color: Colors.transparent),
           ),
-          Padding(
+          SingleChildScrollView(
             padding: const EdgeInsets.all(25.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text("Welcome Back",
+                const SizedBox(height: 100),
+                const Text("Create Account",
                     style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 40),
-
-                // Pass controllers to inputs
+                _buildGlassInput("Full Name", Icons.person_outline_rounded, controller: _nameController),
+                const SizedBox(height: 20),
                 _buildGlassInput("Email Address", Icons.alternate_email_rounded, controller: _emailController),
                 const SizedBox(height: 20),
                 _buildGlassInput(
@@ -96,22 +74,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // Show loader or button
                 _isLoading
                     ? const CircularProgressIndicator(color: Color(0xFF00D2FF))
-                    : _buildLoginButton(),
-
-                const SizedBox(height: 20),
+                    : _buildActionButton("Sign Up", _handleSignUp),
                 TextButton(
-                  onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const SignUpScreen())
-                  ),
-                  child: const Text(
-                      "New here? Create an account",
-                      style: TextStyle(color: Colors.white70)
-                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Already have an account? Sign In", style: TextStyle(color: Colors.white70)),
                 )
               ],
             ),
@@ -121,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildGlassInput(String hint, IconData icon, {required TextEditingController controller, bool isPass = false, Widget? suffix}) {
+  Widget _buildGlassInput(String hint, IconData icon, {bool isPass = false, Widget? suffix, required TextEditingController controller}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -133,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
             borderRadius: BorderRadius.circular(20),
           ),
           child: TextField(
-            controller: controller, // Linked controller
+            controller: controller,
             obscureText: isPass,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
@@ -150,16 +118,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLoginButton() {
+  Widget _buildActionButton(String label, VoidCallback onPressed) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF00D2FF),
         minimumSize: const Size(double.infinity, 60),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 0,
       ),
-      onPressed: _handleLogin, // Trigger auth
-      child: const Text("Sign In", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+      onPressed: onPressed,
+      child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
     );
   }
 }
