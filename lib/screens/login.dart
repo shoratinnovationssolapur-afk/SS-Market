@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'dashboard.dart';
+import 'user_dashboard.dart';
+import 'admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,13 +11,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isObscure = true;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // Globe transformation background
           Hero(
             tag: 'globe_morph',
             child: Positioned(
@@ -30,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-          // Blur Layer
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
             child: Container(color: Colors.transparent),
@@ -42,12 +43,17 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Text("Welcome Back",
                     style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 10),
+                const Text("Admin: admin@ss.com / admin123\nUser: user@ss.com / user123",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white38, fontSize: 12)),
                 const SizedBox(height: 40),
-                _buildGlassInput("Email Address", Icons.alternate_email_rounded),
+                _buildGlassInput("Email Address", Icons.alternate_email_rounded, controller: _emailController),
                 const SizedBox(height: 20),
                 _buildGlassInput(
                   "Password",
                   Icons.lock_outline_rounded,
+                  controller: _passwordController,
                   isPass: _isObscure,
                   suffix: IconButton(
                     icon: Icon(_isObscure ? Icons.visibility_off : Icons.visibility, color: Colors.white60),
@@ -64,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildGlassInput(String hint, IconData icon, {bool isPass = false, Widget? suffix}) {
+  Widget _buildGlassInput(String hint, IconData icon, {bool isPass = false, Widget? suffix, TextEditingController? controller}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -76,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
             borderRadius: BorderRadius.circular(20),
           ),
           child: TextField(
+            controller: controller,
             obscureText: isPass,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
@@ -102,7 +109,20 @@ class _LoginScreenState extends State<LoginScreen> {
       ).copyWith(
         shadowColor: MaterialStateProperty.all(const Color(0xFF00D2FF).withOpacity(0.5)),
       ),
-      onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen())),
+      onPressed: () {
+        String email = _emailController.text.trim();
+        String password = _passwordController.text.trim();
+
+        if (email == "admin@ss.com" && password == "admin123") {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
+        } else if (email == "user@ss.com" && password == "user123") {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const UserDashboard()));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Invalid Credentials"), backgroundColor: Colors.redAccent),
+          );
+        }
+      },
       child: const Text("Sign In", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
     );
   }
