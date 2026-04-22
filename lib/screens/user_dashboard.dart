@@ -1,10 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'user_pages.dart';
 import 'login.dart';
 import 'expert_suggestions.dart';
 
-class UserDashboard extends StatelessWidget {
+class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
+
+  @override
+  State<UserDashboard> createState() => _UserDashboardState();
+}
+
+class _UserDashboardState extends State<UserDashboard> {
+  String _userName = "Loading..."; // Default placeholder
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  // Fetch name from Firestore
+  Future<void> _fetchUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists && mounted) {
+          setState(() {
+            // Fetch 'fullName' from the document
+            _userName = userDoc.get('fullName') ?? "User";
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+      if (mounted) setState(() => _userName = "User");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,11 +52,11 @@ class UserDashboard extends StatelessWidget {
       backgroundColor: const Color(0xFF0D1117),
       appBar: isMobile
           ? AppBar(
-              backgroundColor: const Color(0xFF161B22),
-              title: const Text("Capitalia", style: TextStyle(fontSize: 18, color: Colors.white)),
-              elevation: 0,
-              iconTheme: const IconThemeData(color: Colors.white),
-            )
+        backgroundColor: const Color(0xFF161B22),
+        title: const Text("Capitalia", style: TextStyle(fontSize: 18, color: Colors.white)),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      )
           : null,
       drawer: isMobile ? _buildSidebar(context) : null,
       body: Row(
@@ -33,21 +71,19 @@ class UserDashboard extends StatelessWidget {
                   children: [
                     if (!isMobile) _buildTopBar(),
                     const SizedBox(height: 40),
-                    // Simplified Header: Name and Description
-                    const Text(
-                      "Leo Culhane",
-                      style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                    // CHANGED: Display the fetched name
+                    Text(
+                      _userName,
+                      style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       "Expert Market Analyst & Portfolio Strategist. Providing high-accuracy intraday and long-term trading signals based on technical and fundamental research.",
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 16, height: 1.5),
+                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 16, height: 1.5),
                     ),
                     const SizedBox(height: 40),
-                    // Premium Payment Feature
                     _buildExpertBanner(context),
                     const SizedBox(height: 40),
-                    // Optional: Visual element to fill space professionally
                     _buildFeatureHighlights(),
                   ],
                 ),
@@ -237,20 +273,22 @@ class UserDashboard extends StatelessWidget {
 
   Widget _buildLogout(BuildContext context) {
     return InkWell(
-      onTap: () {
+      onTap: () async {
+        await FirebaseAuth.instance.signOut(); // Sign out from Firebase
+        if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
+              (route) => false,
         );
       },
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
+      child: const Padding(
+        padding: EdgeInsets.all(12.0),
         child: Row(
           children: [
-            const Icon(Icons.logout, color: Colors.grey, size: 20),
-            const SizedBox(width: 16),
-            const Text("Log out", style: TextStyle(color: Colors.grey)),
+            Icon(Icons.logout, color: Colors.grey, size: 20),
+            SizedBox(width: 16),
+            Text("Log out", style: TextStyle(color: Colors.grey)),
           ],
         ),
       ),
