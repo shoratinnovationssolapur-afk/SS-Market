@@ -3,11 +3,9 @@ import 'dart:ui';
 import '../services/auth.dart'; // 1. Import your AuthService
 import 'user_dashboard.dart';
 import 'admin_dashboard.dart';
-<<<<<<< HEAD
-import 'sign_up_screen.dart'; // Fixed import name
-=======
+
 import 'SignUpScreen.dart';
->>>>>>> 670dce1d724121851fa81481bde58ad7aca9814f
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -28,8 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-<<<<<<< HEAD
-=======
+
   // Updated Login Logic
   void _handleLogin() async {
     String email = _emailController.text.trim();
@@ -74,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
->>>>>>> 670dce1d724121851fa81481bde58ad7aca9814f
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,14 +124,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => setState(() => _isObscure = !_isObscure),
                     ),
                   ),
-                  const SizedBox(height: 40),
-<<<<<<< HEAD
-                  _buildLoginButton(context),
-=======
                   _isLoading
                       ? const CircularProgressIndicator(color: Color(0xFF00D2FF))
                       : _buildLoginButton(context),
->>>>>>> 670dce1d724121851fa81481bde58ad7aca9814f
+
                   const SizedBox(height: 20),
                   TextButton(
                     onPressed: () {
@@ -193,7 +186,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-
   Widget _buildLoginButton(BuildContext context) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(

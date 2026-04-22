@@ -7,35 +7,35 @@ class ShareDataService {
 
   final ValueNotifier<List<Map<String, String>>> shares = ValueNotifier<List<Map<String, String>>>([
     {
+      "id": "1",
       "name": "Apple Inc",
-      "sym": "AAPL",
-      "current": "\$182.40",
-      "past": "\$150.00",
-      "future": "\$210.00",
-      "valuation": "\$3.0T",
+      "description": "Buy at CMP for target 200. Bullish trend confirmed.",
       "date": "Oct 24, 2023"
     },
     {
+      "id": "2",
       "name": "Tesla Inc",
-      "sym": "TSLA",
-      "current": "\$240.50",
-      "past": "\$210.00",
-      "future": "\$300.00",
-      "valuation": "\$750B",
+      "description": "Hold for long term. Valuation looks attractive.",
       "date": "Oct 23, 2023"
-    },
-    {
-      "name": "NVIDIA",
-      "sym": "NVDA",
-      "current": "\$450.12",
-      "past": "\$380.00",
-      "future": "\$520.00",
-      "valuation": "\$1.1T",
-      "date": "Oct 22, 2023"
     },
   ]);
 
   void addShare(Map<String, String> share) {
-    shares.value = [...shares.value, share];
+    final newShare = {
+      ...share,
+      "id": DateTime.now().millisecondsSinceEpoch.toString(),
+    };
+    shares.value = [...shares.value, newShare];
+  }
+
+  void updateShare(String id, Map<String, String> updatedData) {
+    shares.value = [
+      for (final share in shares.value)
+        if (share["id"] == id) {...share, ...updatedData} else share
+    ];
+  }
+
+  void deleteShare(String id) {
+    shares.value = shares.value.where((share) => share["id"] != id).toList();
   }
 }
