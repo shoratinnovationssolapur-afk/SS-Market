@@ -12,7 +12,20 @@
           "package_name": "com.ssmarket.app.ss_market"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "594727415232-r7779c0fkjibem0kkkdrmhd705tkgvk3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ssmarket.app.ss_market",
+            "certificate_hash": "6980c2d4b43143d4575a9cfacce26c3bc815faac"
+          }
+        },
+        {
+          "client_id": "594727415232-8tlsvlobgsl9hvfp78sp2mi0kf1id2cn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBPTw_nqcgZ8YOZMKdvRLR_i_6FDT3_HEA"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "594727415232-8tlsvlobgsl9hvfp78sp2mi0kf1id2cn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
