@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'admin_pages.dart';
 import 'login.dart';
 import '../services/share_data_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -10,6 +11,7 @@ class AdminDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isMobile = MediaQuery.of(context).size.width < 1100;
+    final User? user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),
@@ -32,7 +34,7 @@ class AdminDashboard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (!isMobile) _buildTopBar(context),
+                    if (!isMobile) _buildTopBar(context, user?.displayName ?? "Admin"),
                     const SizedBox(height: 32),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +111,7 @@ class AdminDashboard extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildSectionHeader("My portfolio", onTap: () {
+                                    _buildSectionHeader("My history", onTap: () {
                                       Navigator.push(context, MaterialPageRoute(builder: (context) => const PortfolioPage()));
                                     }),
                                     const SizedBox(height: 16),
@@ -131,7 +133,7 @@ class AdminDashboard extends StatelessWidget {
                         ),
                         if (isMobile) ...[
                           const SizedBox(height: 32),
-                          _buildSectionHeader("My portfolio", onTap: () {
+                          _buildSectionHeader("My history", onTap: () {
                             Navigator.push(context, MaterialPageRoute(builder: (context) => const PortfolioPage()));
                           }),
                           const SizedBox(height: 16),
@@ -198,7 +200,7 @@ class AdminDashboard extends StatelessWidget {
                 "past": "\$${pastController.text}",
                 "future": "\$${futureController.text}",
                 "valuation": valuationController.text,
-                "date": "Oct 25, 2023" // In a real app, use DateTime.now()
+                "date": "Oct 25, 2023"
               });
 
               Navigator.pop(context);
@@ -225,7 +227,7 @@ class AdminDashboard extends StatelessWidget {
           labelStyle: const TextStyle(color: Colors.grey),
           prefixIcon: Icon(icon, color: Colors.blueAccent, size: 20),
           enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
             borderRadius: BorderRadius.circular(8),
           ),
           focusedBorder: OutlineInputBorder(
@@ -263,14 +265,8 @@ class AdminDashboard extends StatelessWidget {
               _sidebarItem(context, Icons.dashboard_rounded, "Dashboard", isActive: true, onTap: () {
                  if (Navigator.of(context).canPop()) Navigator.pop(context);
               }),
-              _sidebarItem(context, Icons.bar_chart_rounded, "Market", onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const MarketPage()));
-              }),
-              _sidebarItem(context, Icons.pie_chart_rounded, "Portfolio", onTap: () {
+              _sidebarItem(context, Icons.history_rounded, "History", onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const PortfolioPage()));
-              }),
-              _sidebarItem(context, Icons.description_rounded, "News", onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const NewsPage()));
               }),
               _sidebarItem(context, Icons.settings_rounded, "Settings", onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage()));
@@ -300,7 +296,7 @@ class AdminDashboard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white.withOpacity(0.05) : Colors.transparent,
+          color: isActive ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -338,13 +334,13 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildTopBar(BuildContext context) {
+  Widget _buildTopBar(BuildContext context, String name) {
     return Row(
       children: [
-        const Text("Dashboard", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+        Text("Welcome, $name", style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
         const Spacer(),
         Container(
-          width: 300,
+          width: 250,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(color: const Color(0xFF161B22), borderRadius: BorderRadius.circular(12)),
           child: const TextField(
@@ -427,7 +423,7 @@ class AdminDashboard extends StatelessWidget {
                   color: isPositive ? Colors.greenAccent : Colors.redAccent,
                   barWidth: 2,
                   dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(show: true, color: (isPositive ? Colors.greenAccent : Colors.redAccent).withOpacity(0.1)),
+                  belowBarData: BarAreaData(show: true, color: (isPositive ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.1)),
                 ),
               ],
             )),
@@ -522,11 +518,11 @@ class AdminDashboard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF161B22),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.1)),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
-          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color, size: 24)),
+          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color, size: 24)),
           const SizedBox(width: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
