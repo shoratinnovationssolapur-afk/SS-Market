@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import '../services/auth.dart'; // 1. Import your AuthService
 import 'user_dashboard.dart';
 import 'admin_dashboard.dart';
+<<<<<<< HEAD
 import 'sign_up_screen.dart'; // Fixed import name
+=======
+import 'SignUpScreen.dart';
+>>>>>>> 670dce1d724121851fa81481bde58ad7aca9814f
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,6 +17,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isObscure = true;
+  bool _isLoading = false; // Add loading state
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -22,6 +28,53 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+<<<<<<< HEAD
+=======
+  // Updated Login Logic
+  void _handleLogin() async {
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    // 1. Sign in via Firebase
+    final user = await AuthService().signIn(email, password);
+
+    if (!mounted) return;
+
+    if (user != null) {
+      // 2. Fetch the user's role from Firestore
+      String? role = await AuthService().getUserRole(user.uid);
+
+      if (!mounted) return;
+
+      // 3. Navigate based on role
+      if (role == 'admin') {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
+      } else {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => const UserDashboard()));
+      }
+    } else {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Invalid Credentials"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+>>>>>>> 670dce1d724121851fa81481bde58ad7aca9814f
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,7 +128,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 40),
+<<<<<<< HEAD
                   _buildLoginButton(context),
+=======
+                  _isLoading
+                      ? const CircularProgressIndicator(color: Color(0xFF00D2FF))
+                      : _buildLoginButton(context),
+>>>>>>> 670dce1d724121851fa81481bde58ad7aca9814f
                   const SizedBox(height: 20),
                   TextButton(
                     onPressed: () {
@@ -143,20 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         elevation: 0,
       ),
-      onPressed: () {
-        String email = _emailController.text.trim();
-        String password = _passwordController.text.trim();
-
-        if (email == "admin@ss.com" && password == "admin123") {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
-        } else if (email == "user@ss.com" && password == "user123") {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const UserDashboard()));
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Invalid Credentials"), backgroundColor: Colors.redAccent),
-          );
-        }
-      },
+      onPressed: _handleLogin,
       child: const Text("Sign In", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
     );
   }
