@@ -50,10 +50,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!mounted) return;
 
       if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const UserDashboard()),
-        );
+       Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (context) => const UserDashboard(),
+  ),
+);
       } else {
         throw Exception("Signup Failed");
       }

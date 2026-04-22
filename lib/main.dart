@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart'; // Add this
 import 'screens/get_started.dart';
-import 'screens/login.dart';
-import 'screens/dashboard.dart';
 
 void main() async {
   // 1. Ensure Flutter is ready to talk to native code
