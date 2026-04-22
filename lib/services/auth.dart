@@ -10,34 +10,48 @@ class AuthService {
     try {
       // 1. Create user in Firebase Auth
       UserCredential result = await _auth.createUserWithEmailAndPassword(
-          email: email, password: password);
+        email: email.trim(),
+        password: password.trim(),
+      );
       User? user = result.user;
 
       if (user != null) {
         await user.updateDisplayName(fullName);
 
-        // 2. Determine Role
-        // Logic: If the email matches your admin email, set as admin.
-        // Otherwise, default to 'user'.
+        // 2. Set default role and balance
+        // No hardcoded emails—everyone starts as a 'user'
         String role = "user";
-        if (email.trim().toLowerCase() == "admin@ss.com") {
-          role = "admin";
-        }
 
-        // 3. Create Firestore Document with Role
+        // 3. Create Firestore Document
         await _firestore.collection('users').doc(user.uid).set({
           'uid': user.uid,
           'fullName': fullName,
-          'email': email,
-          'role': role, // <--- New Role Field
+          'email': email.trim(),
+          'role': role,
           'createdAt': FieldValue.serverTimestamp(),
           'portfolioValue': 0.0,
           'profit': 0.0,
+          'balance': 0.0, // Default balance set to 0 as requested
         });
       }
       return user;
     } catch (e) {
       print("Signup Error: $e");
+      return null;
+    }
+  }
+
+  // Sign In
+  Future<User?> signIn(String email, String password) async {
+    try {
+      // No default credentials here. It strictly checks Firebase Auth.
+      UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password.trim(),
+      );
+      return result.user;
+    } catch (e) {
+      print("SignIn Error: ${e.toString()}");
       return null;
     }
   }
@@ -53,18 +67,6 @@ class AuthService {
       print("Error fetching role: $e");
     }
     return null;
-  }
-
-  // Sign In
-  Future<User?> signIn(String email, String password) async {
-    try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
-          email: email, password: password);
-      return result.user;
-    } catch (e) {
-      print("SignIn Error: ${e.toString()}");
-      return null;
-    }
   }
 
   // Sign Out
