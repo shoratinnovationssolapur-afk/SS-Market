@@ -3,9 +3,7 @@ import 'dart:ui';
 import '../services/auth.dart'; // 1. Import your AuthService
 import 'user_dashboard.dart';
 import 'admin_dashboard.dart';
-
 import 'SignUpScreen.dart';
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,7 +23,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-
 
   // Updated Login Logic
   void _handleLogin() async {
@@ -70,7 +67,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -124,10 +120,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => setState(() => _isObscure = !_isObscure),
                     ),
                   ),
+                  const SizedBox(height: 40),
                   _isLoading
                       ? const CircularProgressIndicator(color: Color(0xFF00D2FF))
                       : _buildLoginButton(context),
-
                   const SizedBox(height: 20),
                   TextButton(
                     onPressed: () {
@@ -165,8 +161,8 @@ class _LoginScreenState extends State<LoginScreen> {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            color: Colors.white.withOpacity(0.05),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
             borderRadius: BorderRadius.circular(20),
           ),
           child: TextField(
@@ -186,6 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
   Widget _buildLoginButton(BuildContext context) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
