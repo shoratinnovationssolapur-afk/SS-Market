@@ -9,7 +9,6 @@ class GetStartedScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Background Gradient for a "3D" feel
           Container(
             decoration: const BoxDecoration(
               gradient: RadialGradient(
@@ -48,13 +47,7 @@ class GetStartedScreen extends StatelessWidget {
         tag: 'globe_morph',
         child: GestureDetector(
           onTap: () {
-            Navigator.push(context, PageRouteBuilder(
-              transitionDuration: const Duration(milliseconds: 800),
-              pageBuilder: (context, anim, secAnim) => const LoginScreen(),
-              transitionsBuilder: (context, anim, secAnim, child) {
-                return FadeTransition(opacity: anim, child: child);
-              },
-            ));
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
           },
           child: Container(
             height: 65,
@@ -64,7 +57,7 @@ class GetStartedScreen extends StatelessWidget {
               gradient: const LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)]),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF00D2FF).withOpacity(0.4),
+                  color: const Color(0xFF00D2FF).withValues(alpha: 0.4),
                   blurRadius: 25,
                   offset: const Offset(0, 10),
                 )

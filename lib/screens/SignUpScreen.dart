@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:ss_market/services/auth.dart';
+import '../services/auth.dart';
 import 'user_dashboard.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
+
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
 }
@@ -13,12 +14,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
+
   bool _isObscure = true;
   bool _isLoading = false;
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
 
   void _handleSignUp() async {
-    if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    // Validation logic
+    if (_nameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
       );
@@ -27,28 +39,40 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     setState(() => _isLoading = true);
 
-    final user = await AuthService().signUp(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-      _nameController.text.trim(),
-    );
+    try {
+      // Logic fix: Correctly passing all 3 arguments
+      final user = await AuthService().signUp(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+        _nameController.text.trim(),
+      );
 
-    setState(() => _isLoading = false);
+      if (!mounted) return;
 
-    if (user != null) {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => const UserDashboard()));
-    } else {
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const UserDashboard()),
+        );
+      } else {
+        throw Exception("Signup Failed");
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Signup Failed. Email may be invalid or already in use.")));
+        const SnackBar(content: Text("Signup Failed. Email may be invalid or already in use.")),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black, // Background color for the glass effect
       body: Stack(
         children: [
+          // Background Decorative Globe
           Positioned(
             top: -100,
             left: -100,
@@ -59,46 +83,75 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 height: 450,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)]),
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)],
+                  ),
                 ),
               ),
             ),
           ),
+
+          // Blur Layer
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
             child: Container(color: Colors.transparent),
           ),
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(25.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 100),
-                const Text("Create Account",
-                    style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 40),
-                _buildGlassInput("Full Name", Icons.person_outline_rounded, controller: _nameController),
-                const SizedBox(height: 20),
-                _buildGlassInput("Email Address", Icons.alternate_email_rounded, controller: _emailController),
-                const SizedBox(height: 20),
-                _buildGlassInput(
-                  "Password",
-                  Icons.lock_outline_rounded,
-                  controller: _passwordController,
-                  isPass: _isObscure,
-                  suffix: IconButton(
-                    icon: Icon(_isObscure ? Icons.visibility_off : Icons.visibility, color: Colors.white60),
-                    onPressed: () => setState(() => _isObscure = !_isObscure),
+
+          // Content
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 25.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 60),
+                  const Text(
+                    "Create Account",
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 40),
-                _isLoading
-                    ? const CircularProgressIndicator(color: Color(0xFF00D2FF))
-                    : _buildActionButton("Sign Up", _handleSignUp),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Already have an account? Sign In", style: TextStyle(color: Colors.white70)),
-                )
-              ],
+                  const SizedBox(height: 40),
+                  _buildGlassInput(
+                    "Full Name",
+                    Icons.person_outline_rounded,
+                    controller: _nameController,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildGlassInput(
+                    "Email Address",
+                    Icons.alternate_email_rounded,
+                    controller: _emailController,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildGlassInput(
+                    "Password",
+                    Icons.lock_outline_rounded,
+                    controller: _passwordController,
+                    isPass: _isObscure,
+                    suffix: IconButton(
+                      icon: Icon(
+                        _isObscure ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.white60,
+                      ),
+                      onPressed: () => setState(() => _isObscure = !_isObscure),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  _isLoading
+                      ? const CircularProgressIndicator(color: Color(0xFF00D2FF))
+                      : _buildActionButton("Sign Up", _handleSignUp),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      "Already have an account? Sign In",
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  )
+                ],
+              ),
             ),
           ),
         ],
@@ -106,15 +159,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  Widget _buildGlassInput(String hint, IconData icon, {bool isPass = false, Widget? suffix, required TextEditingController controller}) {
+  Widget _buildGlassInput(
+      String hint,
+      IconData icon,
+      {bool isPass = false, Widget? suffix, required TextEditingController controller}
+      ) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            color: Colors.white.withValues(alpha: 0.05),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             borderRadius: BorderRadius.circular(20),
           ),
           child: TextField(
@@ -141,9 +198,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
         backgroundColor: const Color(0xFF00D2FF),
         minimumSize: const Size(double.infinity, 60),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
       ),
       onPressed: onPressed,
-      child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
     );
   }
 }

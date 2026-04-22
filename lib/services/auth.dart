@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
 
   // Sign Up
   Future<User?> signUp(String email, String password, String fullName) async {
@@ -19,7 +21,8 @@ class AuthService {
         // 2. Update Firebase Display Name
         await user.updateDisplayName(fullName);
 
-        // 3. Create Firestore Document
+        // 3. Create Firestore Document (Now _firestore is defined!)
+
         await _firestore.collection('users').doc(user.uid).set({
           'uid': user.uid,
           'fullName': fullName,
@@ -31,7 +34,10 @@ class AuthService {
       }
       return user;
     } catch (e) {
-      debugPrint("Signup Error: \$e");
+
+      print("Signup Error: $e");
+
+
       return null;
     }
   }
@@ -39,17 +45,20 @@ class AuthService {
   // Sign In
   Future<User?> signIn(String email, String password) async {
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      UserCredential result = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password
+      );
       return result.user;
     } catch (e) {
-      debugPrint(e.toString());
+      print("SignIn Error: ${e.toString()}");
       return null;
     }
   }
+
+  // Sign Out (Handy for testing)
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
 }
 
-// Helper to avoid 'print' lint
-void debugPrint(String message) {
-  // ignore: avoid_print
-  print(message);
-}
