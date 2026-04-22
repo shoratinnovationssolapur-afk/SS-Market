@@ -176,11 +176,11 @@ class UserDashboard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       child: Column(
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.auto_graph, color: Colors.cyanAccent, size: 28),
-              const SizedBox(width: 12),
-              const Text("Capitalia", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              Icon(Icons.auto_graph, color: Colors.cyanAccent, size: 28),
+              SizedBox(width: 12),
+              Text("Capitalia", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 48),
@@ -237,13 +237,13 @@ class UserDashboard extends StatelessWidget {
   }
 
   Widget _buildTopBar() {
-    return Row(
+    return const Row(
       children: [
-        const Text("Welcome back, Leo", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-        const Spacer(),
-        const Icon(Icons.search, color: Colors.grey),
-        const SizedBox(width: 24),
-        const CircleAvatar(radius: 18, backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=leo')),
+        Text("Welcome back, Leo", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+        Spacer(),
+        Icon(Icons.search, color: Colors.grey),
+        SizedBox(width: 24),
+        CircleAvatar(radius: 18, backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=leo')),
       ],
     );
   }
@@ -354,13 +354,13 @@ class UserDashboard extends StatelessWidget {
           (route) => false,
         );
       },
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
+      child: const Padding(
+        padding: EdgeInsets.all(12.0),
         child: Row(
           children: [
-            const Icon(Icons.logout, color: Colors.grey, size: 20),
-            const SizedBox(width: 16),
-            const Text("Log out", style: TextStyle(color: Colors.grey)),
+            Icon(Icons.logout, color: Colors.grey, size: 20),
+            SizedBox(width: 16),
+            Text("Log out", style: TextStyle(color: Colors.grey)),
           ],
         ),
       ),
