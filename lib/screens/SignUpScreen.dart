@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:ss_market/services/auth.dart'; // Import the helper above
+import '../services/auth.dart';
 import 'dashboard.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -35,6 +35,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _nameController.text.trim(), // <--- This was missing!
     );
 
+    
+    if (!mounted) return;
+
     setState(() => _isLoading = false);
 
     if (user != null) {
@@ -51,8 +54,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Globe Background (Matches Login)
-// Inside your Scaffold body: Stack(children: [ ... ])
 
           Positioned( // 1. Positioned stays on the OUTSIDE
             top: -100,
@@ -62,6 +63,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               child: Container( // 3. The actual content/styling goes INSIDE the Hero
                 width: 450,
                 height: 450,
+
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)]),

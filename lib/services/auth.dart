@@ -1,11 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 1. Added this import
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  // 2. ADD THIS LINE: This defines '_firestore' for the whole class
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
 
   // Sign Up
   Future<User?> signUp(String email, String password, String fullName) async {
@@ -22,6 +22,7 @@ class AuthService {
         await user.updateDisplayName(fullName);
 
         // 3. Create Firestore Document (Now _firestore is defined!)
+
         await _firestore.collection('users').doc(user.uid).set({
           'uid': user.uid,
           'fullName': fullName,
@@ -33,7 +34,10 @@ class AuthService {
       }
       return user;
     } catch (e) {
+
       print("Signup Error: $e");
+
+
       return null;
     }
   }
@@ -57,3 +61,4 @@ class AuthService {
     await _auth.signOut();
   }
 }
+

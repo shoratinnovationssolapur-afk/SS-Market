@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'user_dashboard.dart';
-import 'admin_dashboard.dart';
+import '../services/auth.dart';
+import 'dashboard.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignUpScreenState extends State<SignUpScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
   bool _isObscure = true;
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+
+  void _handleSignUp() async {
+    setState(() => _isLoading = true);
+    final user = await AuthService().signUp(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+      _nameController.text.trim(),
+    );
+    
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (user != null) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Signup Failed")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +42,12 @@ class _LoginScreenState extends State<LoginScreen> {
           Hero(
             tag: 'globe_morph',
             child: Positioned(
-              top: -100, left: -100,
+              top: -100, right: -100,
               child: Container(
                 width: 450, height: 450,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)]),
+                  gradient: LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF92FE9D)]),
                 ),
               ),
             ),
@@ -36,19 +56,16 @@ class _LoginScreenState extends State<LoginScreen> {
             filter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
             child: Container(color: Colors.transparent),
           ),
-          Padding(
+          SingleChildScrollView(
             padding: const EdgeInsets.all(25.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text("Welcome Back",
+                const SizedBox(height: 100),
+                const Text("Create Account",
                     style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 10),
-                const Text(
-                    "\"The goal of a successful trader is to make the best trades. Money is secondary.\"",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 14, fontStyle: FontStyle.italic)),
                 const SizedBox(height: 40),
+                _buildGlassInput("Full Name", Icons.person_outline_rounded, controller: _nameController),
+                const SizedBox(height: 20),
                 _buildGlassInput("Email Address", Icons.alternate_email_rounded, controller: _emailController),
                 const SizedBox(height: 20),
                 _buildGlassInput(
@@ -62,7 +79,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                _buildLoginButton(context),
+                _isLoading
+                    ? const CircularProgressIndicator(color: Color(0xFF00D2FF))
+                    : _buildActionButton("Sign Up", _handleSignUp),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Already have an account? Sign In", style: TextStyle(color: Colors.white70)),
+                )
               ],
             ),
           ),
@@ -71,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildGlassInput(String hint, IconData icon, {bool isPass = false, Widget? suffix, TextEditingController? controller}) {
+  Widget _buildGlassInput(String hint, IconData icon, {bool isPass = false, Widget? suffix, required TextEditingController controller}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -100,31 +123,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLoginButton(BuildContext context) {
+  Widget _buildActionButton(String label, VoidCallback onPressed) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF00D2FF),
         minimumSize: const Size(double.infinity, 60),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 0,
-      ).copyWith(
-        shadowColor: MaterialStateProperty.all(const Color(0xFF00D2FF).withOpacity(0.5)),
       ),
-      onPressed: () {
-        String email = _emailController.text.trim();
-        String password = _passwordController.text.trim();
-
-        if (email == "admin@ss.com" && password == "admin123") {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
-        } else if (email == "user@ss.com" && password == "user123") {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const UserDashboard()));
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Invalid Credentials"), backgroundColor: Colors.redAccent),
-          );
-        }
-      },
-      child: const Text("Sign In", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+      onPressed: onPressed,
+      child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
     );
   }
 }
