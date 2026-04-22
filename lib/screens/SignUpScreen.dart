@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:ss_market/services/auth.dart'; // Import the helper above
-import 'dashboard.dart';
+import 'package:ss_market/services/auth.dart';
+import 'user_dashboard.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -18,7 +18,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
 
   void _handleSignUp() async {
-    // Basic validation
     if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
@@ -28,18 +27,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     setState(() => _isLoading = true);
 
-    // FIX: Pass the 3rd argument (_nameController.text)
     final user = await AuthService().signUp(
       _emailController.text.trim(),
       _passwordController.text.trim(),
-      _nameController.text.trim(), // <--- This was missing!
+      _nameController.text.trim(),
     );
 
     setState(() => _isLoading = false);
 
     if (user != null) {
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+          context, MaterialPageRoute(builder: (context) => const UserDashboard()));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Signup Failed. Email may be invalid or already in use.")));
@@ -51,15 +49,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Globe Background (Matches Login)
-// Inside your Scaffold body: Stack(children: [ ... ])
-
-          Positioned( // 1. Positioned stays on the OUTSIDE
+          Positioned(
             top: -100,
             left: -100,
-            child: Hero( // 2. Hero goes INSIDE Positioned
+            child: Hero(
               tag: 'globe_morph',
-              child: Container( // 3. The actual content/styling goes INSIDE the Hero
+              child: Container(
                 width: 450,
                 height: 450,
                 decoration: const BoxDecoration(
