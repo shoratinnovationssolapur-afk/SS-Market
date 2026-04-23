@@ -1,38 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/theme_service.dart';
+import 'login.dart';
 
 class UserHistoryPage extends StatelessWidget {
   const UserHistoryPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Transaction History"),
-        backgroundColor: const Color(0xFF161B22),
+        title: Text("Transaction History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _historyItem("Buy Tesla Inc", "2.0 Shares @ \$231.12", "-\$462.24", "Today, 10:45 AM", false),
-          _historyItem("Sell Apple Inc", "5.0 Shares @ \$182.40", "+\$912.00", "Yesterday, 03:20 PM", true),
-          _historyItem("Buy Bitcoin", "0.01 BTC @ \$65,420.00", "-\$654.20", "22 Oct, 11:15 AM", false),
-          _historyItem("Sell NVIDIA", "1.0 Shares @ \$890.12", "+\$890.12", "20 Oct, 09:30 AM", true),
-          _historyItem("Deposit Funds", "Via UPI", "+\$1,000.00", "18 Oct, 12:00 PM", true),
-          _historyItem("Buy Microsoft", "1.0 Shares @ \$420.10", "-\$420.10", "15 Oct, 02:45 PM", false),
+          _historyItem(context, "Expert Suggestions", "Daily Pass - ₹20", "-₹20.00", "Today, 10:45 AM", false),
+          _historyItem(context, "Deposit Funds", "Via UPI", "+₹5,000.00", "Yesterday, 03:20 PM", true),
+          _historyItem(context, "Buy NIFTY 50", "Lot Size: 50", "-₹18,420.00", "22 Oct, 11:15 AM", false),
+          _historyItem(context, "Sell TATAMOTORS", "10 Shares @ ₹950.12", "+₹9,501.20", "20 Oct, 09:30 AM", true),
+          _historyItem(context, "Withdrawal", "To Bank A/C", "-₹2,000.00", "18 Oct, 12:00 PM", false),
         ],
       ),
     );
   }
 
-  Widget _historyItem(String title, String sub, String amount, String time, bool isCredit) {
+  Widget _historyItem(BuildContext context, String title, String sub, String amount, String time, bool isCredit) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: isDark ? const Color(0xFF161B22) : Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
       ),
       child: Row(
         children: [
@@ -45,7 +51,7 @@ class UserHistoryPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
                 Text(sub, style: const TextStyle(color: Colors.grey, fontSize: 12)),
               ],
             ),
@@ -53,7 +59,7 @@ class UserHistoryPage extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(amount, style: TextStyle(color: isCredit ? Colors.greenAccent : Colors.white, fontWeight: FontWeight.bold)),
+              Text(amount, style: TextStyle(color: isCredit ? Colors.greenAccent : (isDark ? Colors.white : Colors.black), fontWeight: FontWeight.bold)),
               Text(time, style: const TextStyle(color: Colors.grey, fontSize: 11)),
             ],
           ),
@@ -65,30 +71,243 @@ class UserHistoryPage extends StatelessWidget {
 
 class UserSettingsPage extends StatelessWidget {
   const UserSettingsPage({super.key});
+
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
-      appBar: AppBar(title: const Text("Settings"), backgroundColor: const Color(0xFF161B22)),
+      backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
+      appBar: AppBar(
+        title: Text("Settings", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         children: [
-          _settingOption("Profile Information", Icons.person_outline),
-          _settingOption("Security & Password", Icons.lock_outline),
-          _settingOption("Notification Settings", Icons.notifications_none),
-          _settingOption("Help & Support", Icons.help_outline),
-          _settingOption("App Theme", Icons.palette_outlined),
+          // Profile Header
+          _buildProfileHeader(context, user),
+          const SizedBox(height: 32),
+
+          _buildSectionHeader(context, "General"),
+          _settingOption(context, "Edit Profile", Icons.person_outline_rounded, "Name, phone, and bio", onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const EditProfilePage()));
+          }),
+          
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: ThemeService().themeMode,
+            builder: (context, mode, _) {
+              return SwitchListTile(
+                secondary: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, 
+                      color: isDark ? Colors.white70 : Colors.blueAccent, size: 22),
+                ),
+                title: Text("Dark Mode", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16)),
+                subtitle: const Text("Toggle between light and dark theme", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                value: isDark,
+                onChanged: (bool value) {
+                  ThemeService().toggleTheme();
+                },
+                activeColor: Colors.cyanAccent,
+              );
+            },
+          ),
+
+          const SizedBox(height: 48),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ElevatedButton.icon(
+              onPressed: () => _handleLogout(context),
+              icon: const Icon(Icons.logout_rounded, color: Colors.white),
+              label: const Text("Sign Out", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent.withOpacity(0.1),
+                foregroundColor: Colors.redAccent,
+                minimumSize: const Size(double.infinity, 56),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                side: const BorderSide(color: Colors.redAccent, width: 0.5),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _settingOption(String title, IconData icon) {
+  Widget _buildProfileHeader(BuildContext context, User? user) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 50,
+            backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+            child: const Icon(Icons.person, size: 50, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            user?.displayName ?? "User Account",
+            style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            user?.email ?? "",
+            style: const TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(color: isDark ? Colors.cyanAccent : Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+      ),
+    );
+  }
+
+  Widget _settingOption(BuildContext context, String title, IconData icon, String subtitle, {VoidCallback? onTap}) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
-      leading: Icon(icon, color: Colors.cyanAccent),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: () {},
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: isDark ? Colors.white70 : Colors.blueAccent, size: 22),
+      ),
+      title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16)),
+      subtitle: Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+      trailing: Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white24 : Colors.grey),
+      onTap: onTap,
+    );
+  }
+
+  void _handleLogout(BuildContext context) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+}
+
+class EditProfilePage extends StatefulWidget {
+  const EditProfilePage({super.key});
+
+  @override
+  State<EditProfilePage> createState() => _EditProfilePageState();
+}
+
+class _EditProfilePageState extends State<EditProfilePage> {
+  late TextEditingController _nameController;
+  late TextEditingController _phoneController;
+  late TextEditingController _bioController;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    _nameController = TextEditingController(text: user?.displayName ?? "");
+    _phoneController = TextEditingController(text: "+91 9876543210"); 
+    _bioController = TextEditingController(text: "Stock Market Enthusiast"); 
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
+      appBar: AppBar(
+        title: Text("Edit Profile", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile updated!")));
+            },
+            child: Text("SAVE", style: TextStyle(color: isDark ? Colors.cyanAccent : Colors.blueAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 60,
+                  backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+                  child: const Icon(Icons.person, size: 60, color: Colors.grey),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: isDark ? Colors.cyanAccent : Colors.blueAccent, shape: BoxShape.circle),
+                    child: const Icon(Icons.camera_alt_rounded, size: 20, color: Colors.black),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            _buildEditField(context, "Full Name", _nameController),
+            _buildEditField(context, "Phone Number", _phoneController),
+            _buildEditField(context, "Bio", _bioController, maxLines: 3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditField(BuildContext context, String label, TextEditingController controller, {int maxLines = 1}) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            maxLines: maxLines,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: isDark ? const Color(0xFF161B22) : Colors.white,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.all(16),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
