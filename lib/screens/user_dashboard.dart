@@ -33,7 +33,7 @@ class _UserDashboardState extends State<UserDashboard> {
             .get();
 
         setState(() {
-          userName = doc['fullName'] ?? "No Name"; // 🔥 check field name
+          userName = doc.data()?['fullName'] ?? "No Name"; // 🔥 check field name
         });
       }
     } catch (e) {
@@ -155,31 +155,102 @@ class _UserDashboardState extends State<UserDashboard> {
     );
   }
 
-  Widget _buildSidebar(BuildContext context) {
-    return Drawer(
+   Widget _buildSidebar(BuildContext context) {
+    bool isMobile = MediaQuery.of(context).size.width < 1100;
+    
+    Widget content = Container(
+      width: 260,
+      color: const Color(0xFF161B22),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       child: Column(
         children: [
-          ListTile(title: const Text("Dashboard")),
-          ListTile(
-            title: const Text("Logout"),
-            onTap: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-          )
+          const Row(
+            children: [
+              Icon(Icons.auto_graph, color: Colors.cyanAccent, size: 28),
+              SizedBox(width: 12),
+              Text("Capitalia", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 48),
+          _navItem(context, Icons.dashboard_rounded, "Dashboard", active: true, onTap: () {
+            if (isMobile) Navigator.pop(context);
+          }),
+          _navItem(context, Icons.insights_rounded, "Expert Suggestions", onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const ExpertSuggestionsPage()));
+          }),
+          _navItem(context, Icons.history_rounded, "Transaction History", onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const UserHistoryPage()));
+          }),
+          _navItem(context, Icons.settings_outlined, "Settings", onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const UserSettingsPage()));
+          }),
+          const Spacer(),
+          _buildLogout(context),
         ],
       ),
     );
+
+    if (isMobile) {
+      return Drawer(
+        backgroundColor: const Color(0xFF161B22),
+        child: content,
+      );
+    }
+    return content;
   }
+  
+
+
 
   Widget _buildTopBar() {
     return const Row(
       children: [
         Text("User Panel", style: TextStyle(color: Colors.grey)),
       ],
+    );
+  }
+
+  Widget _navItem(BuildContext context, IconData icon, String label,
+      {bool active = false, VoidCallback? onTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Row(
+          children: [
+            Icon(icon,
+                color: active ? Colors.cyanAccent : Colors.grey, size: 20),
+            const SizedBox(width: 12),
+            Text(label,
+                style: TextStyle(
+                    color: active ? Colors.white : Colors.grey,
+                    fontSize: 14,
+                    fontWeight: active ? FontWeight.bold : FontWeight.normal)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogout(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+              Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        }
+      },
+      child: const Row(
+        children: [
+          Icon(Icons.logout, color: Colors.red, size: 20),
+          SizedBox(width: 12),
+          Text("Logout",
+              style: TextStyle(color: Colors.red, fontSize: 14)),
+        ],
+      ),
     );
   }
 }
