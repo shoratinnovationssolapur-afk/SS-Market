@@ -56,12 +56,15 @@ class _UserDashboardState extends State<UserDashboard> {
       backgroundColor: isDark ? const Color(0xFF02101A) : Colors.grey[50],
       appBar: isMobile
           ? AppBar(
+
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        title: Text("Capitalia",
+        title: Text("SS Market",
             style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.black)),
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       )
+
+
           : null,
       drawer: isMobile ? _buildSidebar(context) : null,
       body: Row(
@@ -322,7 +325,7 @@ class _UserDashboardState extends State<UserDashboard> {
             children: [
               Icon(Icons.auto_graph, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 28),
               const SizedBox(width: 12),
-              Text("Capitalia", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+              Text("SS Market", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 48),
