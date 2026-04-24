@@ -19,7 +19,7 @@ class AdminDashboard extends StatelessWidget {
       appBar: isMobile
           ? AppBar(
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        title: Text("Capitalia Admin",
+        title: Text("SS Market Admin",
             style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.black)),
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
