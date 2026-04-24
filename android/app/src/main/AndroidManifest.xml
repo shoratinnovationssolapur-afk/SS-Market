@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ssmarket.app.ss_market"> <uses-permission android:name="android.permission.INTERNET" />
-
+    <uses-permission android:name="com.android.vending.BILLING" />
     <application
         android:label="ss_market"
         android:name="${applicationName}"

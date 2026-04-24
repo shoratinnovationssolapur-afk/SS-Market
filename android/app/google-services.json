@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "594727415232-b226m3s7k4f8ms7i0eolqultjgsghcqq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ssmarket.app.ss_market",
+            "certificate_hash": "36f088439d8108671da6b4ab831197e2e3cbb632"
+          }
+        },
+        {
           "client_id": "594727415232-r7779c0fkjibem0kkkdrmhd705tkgvk3.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
