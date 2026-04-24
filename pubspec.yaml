@@ -1,4 +1,4 @@
-name: ss_market
+name: ss market
 description: "Professional Share Market App"
 publish_to: 'none'
 version: 1.0.0+1
@@ -9,10 +9,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
   cupertino_icons: ^1.0.8
 
   firebase_core: ^4.7.0
   cloud_firestore: ^6.3.0
+
+  in_app_purchase: ^3.2.0 # Check for latest version
 
   google_fonts: ^6.2.1
   fl_chart: ^0.70.2 # Required for the stock charts
