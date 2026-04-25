@@ -165,7 +165,7 @@ class _ExpertSuggestionsPageState extends State<ExpertSuggestionsPage> {
             Text(
               "No suggestions added by admin yet.",
               style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
+            )
           ],
         ),
       ),

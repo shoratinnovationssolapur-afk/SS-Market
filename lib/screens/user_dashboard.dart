@@ -27,6 +27,8 @@ class _UserDashboardState extends State<UserDashboard> {
     super.initState();
     _billingService.initialize();
     _fetchUserData();
+    // ✅ NEW: Verify if this specific logged-in user has paid
+    SubscriptionService().checkSubscriptionStatus();
   }
 
   Future<void> _fetchUserData() async {
@@ -426,8 +428,16 @@ class _UserDashboardState extends State<UserDashboard> {
   Widget _buildLogout(BuildContext context) {
     return InkWell(
       onTap: () async {
-        await FirebaseAuth.instance.signOut(); // Sign out from Firebase
-        if (!mounted) return;
+        // 1. Sign out from Firebase Auth
+        await FirebaseAuth.instance.signOut();
+
+        // 2. ✅ CRITICAL: Reset the local subscription state
+        // This ensures the next user doesn't see the previous user's unlocked content
+        SubscriptionService().reset();
+
+        if (!context.mounted) return;
+
+        // 3. Navigate back to Login and clear the navigation stack
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const LoginScreen()),
