@@ -7,25 +7,44 @@ class UserHistoryPage extends StatelessWidget {
   const UserHistoryPage({super.key});
 
   @override
+  @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
-      appBar: AppBar(
-        title: Text("Transaction History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
-        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        elevation: 0,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _historyItem(context, "Expert Suggestions", "Daily Pass - ₹20", "-₹20.00", "Today, 10:45 AM", false),
-          _historyItem(context, "Deposit Funds", "Via UPI", "+₹5,000.00", "Yesterday, 03:20 PM", true),
-          _historyItem(context, "Buy NIFTY 50", "Lot Size: 50", "-₹18,420.00", "22 Oct, 11:15 AM", false),
-          _historyItem(context, "Sell TATAMOTORS", "10 Shares @ ₹950.12", "+₹9,501.20", "20 Oct, 09:30 AM", true),
-          _historyItem(context, "Withdrawal", "To Bank A/C", "-₹2,000.00", "18 Oct, 12:00 PM", false),
-        ],
+      // ... existing Scaffold properties ...
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(user?.uid)
+            .collection('transactions')
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No transactions yet", style: TextStyle(color: Colors.grey)));
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              var doc = snapshot.data!.docs[index];
+              return _historyItem(
+                context,
+                doc['title'],
+                doc['subtitle'],
+                doc['amount'],
+                doc['dateString'], // or format doc['timestamp']
+                doc['isCredit'],
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -144,25 +163,27 @@ class UserSettingsPage extends StatelessWidget {
 
   Widget _buildProfileHeader(BuildContext context, User? user) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-            child: const Icon(Icons.person, size: 50, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            user?.displayName ?? "User Account",
-            style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            user?.email ?? "",
-            style: const TextStyle(color: Colors.grey, fontSize: 14),
-          ),
-        ],
-      ),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(user?.uid).snapshots(),
+      builder: (context, snapshot) {
+        String name = "User Account";
+        String bio = "Stock Market Enthusiast";
+
+        if (snapshot.hasData && snapshot.data!.exists) {
+          name = snapshot.data!['name'] ?? name;
+          bio = snapshot.data!['bio'] ?? bio;
+        }
+
+        return Column(
+          children: [
+            CircleAvatar(radius: 50, /* ... icon ... */),
+            const SizedBox(height: 16),
+            Text(name, style: TextStyle(/* ... style ... */)),
+            Text(bio, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            Text(user?.email ?? "", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        );
+      },
     );
   }
 
