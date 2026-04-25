@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/subscription_service.dart';
@@ -104,51 +105,95 @@ class _ExpertSuggestionsPageState extends State<ExpertSuggestionsPage> {
   }
 
   Widget _buildUnlockedView() {
-    return ValueListenableBuilder<List<Map<String, String>>>(
-      valueListenable: ShareDataService().shares,
-      builder: (context, shares, _) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
+    return StreamBuilder<QuerySnapshot>(
+      // ✅ NEW: Listening to the actual Cloud Firestore collection
+        stream: FirebaseFirestore.instance
+            .collection('share_details')
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          // 1. Handle Loading State
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
+          }
+
+          // 2. Handle Empty Data
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return _buildEmptyStateUI();
+          }
+
+          final shares = snapshot.data!.docs;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Your existing Expiry Timer Header
+                _buildExpiryTimerHeader(),
+
+                const SizedBox(height: 32),
+                const Text("Admin's Live Suggestions",
+                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+
+                // ✅ NEW: Mapping Firestore documents to your UI
+                ...shares.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return _buildSignalCard(
+                    data["name"] ?? "N/A",
+                    data["description"] ?? "",
+                    data["date"] ?? "",
+                  );
+                }).toList(),
+              ],
+            ),
+          );
+        }
+    );
+  }
+
+  Widget _buildEmptyStateUI() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inventory_2_outlined, color: Colors.white10, size: 60),
+            SizedBox(height: 16),
+            Text(
+              "No suggestions added by admin yet.",
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+// Helper to keep your build method clean
+  Widget _buildExpiryTimerHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)]),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.timer_outlined, color: Colors.white),
+          const SizedBox(width: 12),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)]),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.timer_outlined, color: Colors.white),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Access Period Ending In", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                        Text(SubscriptionService().remainingTime, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              const Text("Admin's Live Suggestions", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              if (shares.isEmpty)
-                const Center(child: Padding(
-                  padding: EdgeInsets.all(40.0),
-                  child: Text("No suggestions added by admin yet.", style: TextStyle(color: Colors.grey)),
-                )),
-              ...shares.map((share) => _buildSignalCard(
-                share["name"] ?? "N/A",
-                share["description"] ?? "",
-                share["date"] ?? "",
-              )).toList(),
+              const Text("Access Period Ending In", style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(SubscriptionService().remainingTime,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
-        );
-      }
+        ],
+      ),
     );
   }
 

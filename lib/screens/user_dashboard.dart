@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../services/billing_service.dart';
 import '../services/subscription_service.dart';
 import '../services/share_data_service.dart';
 
@@ -19,10 +20,12 @@ class UserDashboard extends StatefulWidget {
 
 class _UserDashboardState extends State<UserDashboard> {
   String _userName = "Loading...";
+  final BillingService _billingService = BillingService();
 
   @override
   void initState() {
     super.initState();
+    _billingService.initialize();
     _fetchUserData();
   }
 
@@ -128,6 +131,40 @@ class _UserDashboardState extends State<UserDashboard> {
     );
   }
 
+  Widget _buildUnlockedBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle, color: Colors.greenAccent, size: 14),
+          SizedBox(width: 4),
+          Text("Unlocked",
+              style: TextStyle(
+                  color: Colors.greenAccent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoSuggestionsMessage(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Text(
+          "No live suggestions at the moment.",
+          style: TextStyle(color: isDark ? Colors.grey : Colors.black54),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPaidSuggestionsView(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
@@ -136,45 +173,37 @@ class _UserDashboardState extends State<UserDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              "Expert Suggestions",
-              style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.greenAccent, size: 14),
-                  SizedBox(width: 4),
-                  Text("Unlocked", style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
+            Text("Expert Suggestions",
+                style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 24, fontWeight: FontWeight.bold)),
+            _buildUnlockedBadge(),
           ],
         ),
         const SizedBox(height: 16),
-        ValueListenableBuilder<List<Map<String, String>>>(
-          valueListenable: ShareDataService().shares,
-          builder: (context, shares, _) {
-            if (shares.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Text("No live suggestions at the moment.", style: TextStyle(color: isDark ? Colors.grey : Colors.black54)),
-                ),
-              );
+        StreamBuilder<QuerySnapshot>(
+          // ✅ Ensure this matches the collection name in your AdminDashboard
+          stream: FirebaseFirestore.instance
+              .collection('signals')
+              .orderBy('timestamp', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
             }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return _buildNoSuggestionsMessage(isDark);
+            }
+
             return ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: shares.length,
+              itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
-                final share = shares[index];
-                return _buildSuggestionCard(context, share);
+                final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+                return _buildSuggestionCard(context, {
+                  "name": data["name"] ?? "N/A",
+                  "date": data["date"] ?? "",
+                  "description": data["description"] ?? "",
+                });
               },
             );
           },
@@ -288,14 +317,16 @@ class _UserDashboardState extends State<UserDashboard> {
                 ),
                 const SizedBox(height: 28),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const ExpertSuggestionsPage()));
+                    await _billingService.buySignal();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF3A7BD5),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
                   ),
                   child: const Text("Pay ₹20 & Unlock", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 )

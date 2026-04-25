@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'admin_user_history.dart';
 import 'admin_pages.dart';
@@ -70,39 +71,47 @@ class AdminDashboard extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 24),
-                  Expanded(
-                    child: ValueListenableBuilder<List<Map<String, String>>>(
-                      valueListenable: ShareDataService().shares,
-                      builder: (context, shares, _) {
-                        if (shares.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.analytics_outlined,
-                                    color: isDark ? Colors.white10 : Colors.black12, size: 80),
-                                const SizedBox(height: 16),
-                                Text("No shares added yet.",
-                                    style: TextStyle(color: isDark ? Colors.grey : Colors.black54)),
-                                const SizedBox(height: 8),
-                                Text(
-                                    "Click 'Add Share' to start giving suggestions.",
-                                    style: TextStyle(
-                                        color: isDark ? Colors.white24 : Colors.black26, fontSize: 12)),
-                              ],
-                            ),
-                          );
-                        }
-                        return ListView.builder(
-                          itemCount: shares.length,
-                          itemBuilder: (context, index) {
-                            final share = shares[index];
-                            return _buildAdminShareCard(context, share);
-                          },
-                        );
-                      },
-                    ),
-                  ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                // ✅ NEW: Listening to 'share_details' ordered by newest first
+                stream: FirebaseFirestore.instance
+                    .collection('share_details')
+                    .orderBy('timestamp', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.analytics_outlined, color: isDark ? Colors.white10 : Colors.black12, size: 80),
+                          const SizedBox(height: 16),
+                          const Text("No share details found in cloud.", style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) {
+                      var doc = snapshot.data!.docs[index];
+                      var data = doc.data() as Map<String, dynamic>;
+
+                      return _buildAdminShareCard(context, {
+                        "name": data["name"] ?? "N/A",
+                        "date": "${data["date"]} at ${data["time"]} (By: ${data["createdBy"]})",
+                        "description": data["description"] ?? "",
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
                 ],
               ),
             ),
@@ -175,18 +184,42 @@ class AdminDashboard extends StatelessWidget {
             child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (nameController.text.isEmpty) return;
-              ShareDataService().addShare({
-                "id": DateTime.now().millisecondsSinceEpoch.toString(),
-                "name": nameController.text,
-                "description": descController.text,
-                "date": DateTime.now().toString().split(' ')[0],
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Share added successfully!")),
-              );
+
+              try {
+                final User? user = FirebaseAuth.instance.currentUser;
+                final DateTime now = DateTime.now();
+
+                print("Attempting to save to Firestore..."); // Debug log
+
+                await FirebaseFirestore.instance.collection('share_details').add({
+                  "name": nameController.text,
+                  "description": descController.text,
+                  "date": "${now.day}/${now.month}/${now.year}",
+                  "time": "${now.hour}:${now.minute.toString().padLeft(2, '0')}",
+                  "timestamp": FieldValue.serverTimestamp(),
+                  "createdBy": user?.displayName ?? "Admin",
+                  "adminUid": user?.uid,
+                  "type": "EXPERT SUGGESTION",
+                });
+
+                print("Save Successful!"); // Debug log
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Share published successfully!")),
+                  );
+                }
+              } catch (e) {
+                print("Firestore Error: $e"); // 👈 THIS WILL TELL YOU THE REAL PROBLEM
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Error: ${e.toString()}")),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
             child: const Text("Save Share", style: TextStyle(color: Colors.white)),
