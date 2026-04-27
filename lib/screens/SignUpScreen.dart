@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import '../services/auth.dart';
 import 'user_dashboard.dart';
 
@@ -27,7 +26,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _handleSignUp() async {
-    // Validation logic
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _passwordController.text.isEmpty) {
@@ -40,7 +38,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Logic fix: Correctly passing all 3 arguments
       final user = await AuthService().signUp(
         _emailController.text.trim(),
         _passwordController.text.trim(),
@@ -50,12 +47,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!mounted) return;
 
       if (user != null) {
-       Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(
-    builder: (context) => const UserDashboard(),
-  ),
-);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const UserDashboard(),
+          ),
+        );
       } else {
         throw Exception("Signup Failed");
       }
@@ -71,144 +68,119 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Background color for the glass effect
-      body: Stack(
-        children: [
-          // Background Decorative Globe
-          Positioned(
-            top: -100,
-            left: -100,
-            child: Hero(
-              tag: 'globe_morph',
-              child: Container(
-                width: 450,
-                height: 450,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)],
-                  ),
-                ),
+      backgroundColor: const Color(0xFFF8F9FE),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF6C63FF)),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 30.0),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              const Text(
+                "Create Account",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
-            ),
-          ),
-
-          // Blur Layer
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
-            child: Container(color: Colors.transparent),
-          ),
-
-          // Content
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 25.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 60),
-                  const Text(
-                    "Create Account",
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  _buildGlassInput(
-                    "Full Name",
-                    Icons.person_outline_rounded,
-                    controller: _nameController,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildGlassInput(
-                    "Email Address",
-                    Icons.alternate_email_rounded,
-                    controller: _emailController,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildGlassInput(
-                    "Password",
-                    Icons.lock_outline_rounded,
-                    controller: _passwordController,
-                    isPass: _isObscure,
-                    suffix: IconButton(
-                      icon: Icon(
-                        _isObscure ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.white60,
+              const SizedBox(height: 8),
+              const Text(
+                "Fill in your details to get started",
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 50),
+              _buildInputField(
+                hint: "Full Name",
+                icon: Icons.person_outline,
+                controller: _nameController,
+              ),
+              const SizedBox(height: 20),
+              _buildInputField(
+                hint: "Email",
+                icon: Icons.email_outlined,
+                controller: _emailController,
+              ),
+              const SizedBox(height: 20),
+              _buildInputField(
+                hint: "Password",
+                icon: Icons.lock_outline,
+                controller: _passwordController,
+                isPassword: true,
+                isObscure: _isObscure,
+                onObscureToggle: () => setState(() => _isObscure = !_isObscure),
+              ),
+              const SizedBox(height: 40),
+              _isLoading
+                  ? const CircularProgressIndicator(color: Color(0xFF6C63FF))
+                  : ElevatedButton(
+                      onPressed: _handleSignUp,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C63FF),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 55),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        elevation: 0,
                       ),
-                      onPressed: () => setState(() => _isObscure = !_isObscure),
+                      child: const Text(
+                        "Register",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+              const SizedBox(height: 30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Already have an account? ", style: TextStyle(color: Colors.grey)),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: const Text(
+                      "Login",
+                      style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(height: 40),
-                  _isLoading
-                      ? const CircularProgressIndicator(color: Color(0xFF00D2FF))
-                      : _buildActionButton("Sign Up", _handleSignUp),
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      "Already have an account? Sign In",
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  )
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGlassInput(
-      String hint,
-      IconData icon,
-      {bool isPass = false, Widget? suffix, required TextEditingController controller}
-      ) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: isPass,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              prefixIcon: Icon(icon, color: const Color(0xFF00D2FF)),
-              suffixIcon: suffix,
-              hintText: hint,
-              hintStyle: const TextStyle(color: Colors.white38),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(20),
-            ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildActionButton(String label, VoidCallback onPressed) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF00D2FF),
-        minimumSize: const Size(double.infinity, 60),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 0,
+  Widget _buildInputField({
+    required String hint,
+    required IconData icon,
+    required TextEditingController controller,
+    bool isPassword = false,
+    bool isObscure = false,
+    VoidCallback? onObscureToggle,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
       ),
-      onPressed: onPressed,
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
+      child: TextField(
+        controller: controller,
+        obscureText: isPassword ? isObscure : false,
+        style: const TextStyle(color: Colors.black),
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(icon, color: const Color(0xFF6C63FF)),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(isObscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: Colors.grey),
+                  onPressed: onObscureToggle,
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
         ),
       ),
     );

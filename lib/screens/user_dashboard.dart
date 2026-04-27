@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-import '../services/billing_service.dart';
 import '../services/subscription_service.dart';
-import '../services/share_data_service.dart';
-
-import 'user_pages.dart';
 import 'login.dart';
-import 'expert_suggestions.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -19,16 +12,12 @@ class UserDashboard extends StatefulWidget {
 }
 
 class _UserDashboardState extends State<UserDashboard> {
-  String _userName = "Loading...";
-  final BillingService _billingService = BillingService();
+  String _userName = "snehal";
 
   @override
   void initState() {
     super.initState();
-    _billingService.initialize();
     _fetchUserData();
-    // ✅ NEW: Verify if this specific logged-in user has paid
-    SubscriptionService().checkSubscriptionStatus();
   }
 
   Future<void> _fetchUserData() async {
@@ -42,424 +31,197 @@ class _UserDashboardState extends State<UserDashboard> {
 
         if (userDoc.exists && mounted) {
           setState(() {
-            _userName = userDoc.get('fullName') ?? "User";
+            _userName = (userDoc.get('fullName') ?? "snehal").split(' ')[0].toLowerCase();
           });
         }
       }
     } catch (e) {
       debugPrint("Error fetching user data: $e");
-      if (mounted) setState(() => _userName = "User");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    bool isMobile = MediaQuery.of(context).size.width < 1100;
-
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF02101A) : Colors.grey[50],
-      appBar: isMobile
-          ? AppBar(
-        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        title: Row(
-          children: [
-            Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
-            const SizedBox(width: 8),
-            Text("SS Market",
-                style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.black)),
-          ],
-        ),
+      backgroundColor: const Color(0xFFF7F8FC),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF6C63FF), // Dark purple AppBar
         elevation: 0,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
-      )
-
-
-          : null,
-      drawer: isMobile ? _buildSidebar(context) : null,
-      body: Row(
+        title: const Text(
+          "SSMarket",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+          )
+        ],
+      ),
+      body: Column(
         children: [
-          if (!isMobile) _buildSidebar(context),
           Expanded(
-            child: Container(
-              padding: EdgeInsets.all(isMobile ? 16 : 24),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (!isMobile) _buildTopBar(context),
-                    const SizedBox(height: 40),
-
-                    // RESOLVED: Combined name and style logic
-                    Text(
-                      _userName,
-                      style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Header Gradient Card (Cyan/Blue to Purple)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(35),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00D2FF), Color(0xFF6C63FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                     ),
-
-                    const SizedBox(height: 12),
-                    Text(
-                      "Expert Market Analyst & Portfolio Strategist. Providing high-accuracy intraday and long-term trading signals based on technical and fundamental research.",
-                      style: TextStyle(
-                          color: isDark ? Colors.white.withValues(alpha: 0.6) : Colors.black54,
-                          fontSize: 16,
-                          height: 1.5
-                      ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.show_chart, color: Colors.white, size: 80), // Trend icon
+                        const SizedBox(height: 20),
+                        Text(
+                          "Hello, $_userName 👋",
+                          style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "Grow your knowledge with expert-picked stock lessons.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white, fontSize: 16, height: 1.4),
+                        ),
+                      ],
                     ),
+                  ),
 
-                    const SizedBox(height: 40),
-
-                    // RESOLVED: Using ValueListenableBuilder for subscription logic
-                    ValueListenableBuilder<bool>(
-                      valueListenable: SubscriptionService().isSubscribed,
-                      builder: (context, isSubscribed, _) {
-                        // Check for active subscription
-                        bool isValid = SubscriptionService().hasActiveSubscription;
-                        if (isValid) {
-                          return _buildPaidSuggestionsView(context);
-                        } else {
-                          return _buildExpertBanner(context);
-                        }
-                      },
+                  // Today's Access Pass Card
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.all(25),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 10))
+                      ],
                     ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          "Today's Access Pass",
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "Pay just ₹20 to unlock today's Learning.",
+                          style: TextStyle(color: Colors.grey, fontSize: 15),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          "₹20",
+                          style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF)),
+                        ),
+                      ],
+                    ),
+                  ),
 
-                    const SizedBox(height: 40),
-                    _buildFeatureHighlights(context),
-                  ],
-                ),
+                  const SizedBox(height: 25),
+
+                  // Two Small Cards Grid
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildSmallCard("Secure Payment", Icons.lock_outline)),
+                        const SizedBox(width: 20),
+                        Expanded(child: _buildSmallCard("Expert Picks", Icons.star)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUnlockedBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.check_circle, color: Colors.greenAccent, size: 14),
-          SizedBox(width: 4),
-          Text("Unlocked",
-              style: TextStyle(
-                  color: Colors.greenAccent,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNoSuggestionsMessage(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text(
-          "No live suggestions at the moment.",
-          style: TextStyle(color: isDark ? Colors.grey : Colors.black54),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaidSuggestionsView(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text("Expert Suggestions",
-                style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 24, fontWeight: FontWeight.bold)),
-            _buildUnlockedBadge(),
-          ],
-        ),
-        const SizedBox(height: 16),
-        StreamBuilder<QuerySnapshot>(
-          // ✅ Ensure this matches the collection name in your AdminDashboard
-          stream: FirebaseFirestore.instance
-              .collection('signals')
-              .orderBy('timestamp', descending: true)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
-            }
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return _buildNoSuggestionsMessage(isDark);
-            }
-
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: snapshot.data!.docs.length,
-              itemBuilder: (context, index) {
-                final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-                return _buildSuggestionCard(context, {
-                  "name": data["name"] ?? "N/A",
-                  "date": data["date"] ?? "",
-                  "description": data["description"] ?? "",
-                });
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSuggestionCard(BuildContext context, Map<String, String> share) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF161B22) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.cyanAccent.withOpacity(0.1) : Colors.blueAccent.withOpacity(0.1)),
-        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(share["name"] ?? "N/A", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(share["date"] ?? "", style: const TextStyle(color: Colors.grey, fontSize: 11)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(share["description"] ?? "", style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 14)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureHighlights(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Why Join Premium?", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        _highlightItem(context, Icons.verified_rounded, "High Accuracy Signals", "Verified trade ideas with precise entry/exit."),
-        _highlightItem(context, Icons.timer_rounded, "Real-time Updates", "Get notified immediately when a new signal is active."),
-        _highlightItem(context, Icons.security_rounded, "Risk Management", "Every suggestion comes with a calculated stop-loss."),
-      ],
-    );
-  }
-
-  Widget _highlightItem(BuildContext context, IconData icon, String title, String desc) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: Row(
-        children: [
+          
+          // Bottom Message & Buttons (as seen in screenshot 4)
           Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: isDark ? Colors.cyanAccent.withValues(alpha: 0.1) : Colors.blueAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 24),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 4),
-                Text(desc, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-              ],
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
             ),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExpertBanner(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF00D2FF), Color(0xFF3A7BD5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00D2FF).withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          )
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  "Get Expert Signals",
-                  style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
+                  "💰 Please pay ₹20 first to view stock info.",
+                  style: TextStyle(color: Color(0xFF333333), fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 15),
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.visibility),
+                  label: const Text("View"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C63FF),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(180, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    elevation: 0,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  "Unlock today's premium buy/sell suggestions for just ₹20. Valid for 24 hours.",
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 15),
-                ),
-                const SizedBox(height: 28),
-                ElevatedButton(
-                  onPressed: () async {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const ExpertSuggestionsPage()));
-                    await _billingService.buySignal();
-                  },
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.payment),
+                  label: const Text("Pay ₹20 & Unlock"),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF3A7BD5),
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-
+                    backgroundColor: const Color(0xFF00CBA9), // Teal color from screenshot
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 60),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    elevation: 0,
                   ),
-                  child: const Text("Pay ₹20 & Unlock", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                )
+                ),
               ],
             ),
           ),
-          if (MediaQuery.of(context).size.width > 600) ...[
-            const SizedBox(width: 40),
-            const Icon(Icons.bolt_rounded, color: Colors.white, size: 100),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildSidebar(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    bool isMobile = MediaQuery.of(context).size.width < 1100;
-
-    Widget content = Container(
-      width: 260,
-      color: isDark ? const Color(0xFF161B22) : Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+  Widget _buildSmallCard(String title, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(25),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
+        ],
+      ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Image.asset('assets/logo_dark.png', height: 40, errorBuilder: (c, e, s) => Icon(Icons.auto_graph, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 28)),
-              const SizedBox(width: 12),
-              Text("SS Market", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
-            ],
+          Icon(icon, color: const Color(0xFF6C63FF).withOpacity(0.5), size: 35),
+          const SizedBox(height: 15),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
           ),
-          const SizedBox(height: 48),
-          _navItem(context, Icons.dashboard_rounded, "Dashboard", active: true, onTap: () {
-            if (isMobile) Navigator.pop(context);
-          }),
-          _navItem(context, Icons.insights_rounded, "Expert Signals", onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const ExpertSuggestionsPage()));
-          }),
-          _navItem(context, Icons.history_rounded, "History", onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const UserHistoryPage()));
-          }),
-          _navItem(context, Icons.settings_outlined, "Settings", onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const UserSettingsPage()));
-          }),
-          const Spacer(),
-          _buildLogout(context),
         ],
-      ),
-    );
-
-    if (isMobile) {
-      return Drawer(
-        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        child: content,
-      );
-    }
-    return content;
-  }
-
-  Widget _navItem(BuildContext context, IconData icon, String title, {bool active = false, VoidCallback? onTap}) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: active ? (isDark ? Colors.cyanAccent.withValues(alpha: 0.1) : Colors.blueAccent.withOpacity(0.1)) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: active ? (isDark ? Colors.cyanAccent : Colors.blueAccent) : Colors.grey, size: 20),
-            const SizedBox(width: 16),
-            Text(title, style: TextStyle(color: active ? (isDark ? Colors.white : Colors.black) : Colors.grey)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Row(
-      children: [
-        Image.asset('assets/logo_dark.png', height: 35, errorBuilder: (c, e, s) => const Icon(Icons.auto_graph, color: Colors.green)),
-        const SizedBox(width: 12),
-        Text("User Panel", style: TextStyle(color: isDark ? Colors.grey : Colors.black45, fontSize: 14)),
-        const Spacer(),
-        Icon(Icons.search, color: isDark ? Colors.grey : Colors.black45),
-        const SizedBox(width: 24),
-        const CircleAvatar(radius: 18, backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=leo')),
-      ],
-    );
-  }
-
-  Widget _buildLogout(BuildContext context) {
-    return InkWell(
-      onTap: () async {
-        // 1. Sign out from Firebase Auth
-        await FirebaseAuth.instance.signOut();
-
-        // 2. ✅ CRITICAL: Reset the local subscription state
-        // This ensures the next user doesn't see the previous user's unlocked content
-        SubscriptionService().reset();
-
-        if (!context.mounted) return;
-
-        // 3. Navigate back to Login and clear the navigation stack
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-              (route) => false,
-        );
-      },
-      child: const Padding(
-        padding: EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            Icon(Icons.logout, color: Colors.grey, size: 20),
-            SizedBox(width: 16),
-            Text("Log out", style: TextStyle(color: Colors.grey)),
-          ],
-        ),
       ),
     );
   }
