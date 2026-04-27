@@ -1,36 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/theme_service.dart';
 import 'login.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserHistoryPage extends StatelessWidget {
   const UserHistoryPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
-        title: Text("Transaction History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        title: Text("Transaction History",
+            style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _historyItem(context, "Expert Suggestions", "Daily Pass - ₹20", "-₹20.00", "Today, 10:45 AM", false),
-          _historyItem(context, "Deposit Funds", "Via UPI", "+₹5,000.00", "Yesterday, 03:20 PM", true),
-          _historyItem(context, "Buy NIFTY 50", "Lot Size: 50", "-₹18,420.00", "22 Oct, 11:15 AM", false),
-          _historyItem(context, "Sell TATAMOTORS", "10 Shares @ ₹950.12", "+₹9,501.20", "20 Oct, 09:30 AM", true),
-          _historyItem(context, "Withdrawal", "To Bank A/C", "-₹2,000.00", "18 Oct, 12:00 PM", false),
-        ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(user?.uid)
+            .collection('user_payments')
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history_toggle_off_rounded, size: 64, color: isDark ? Colors.white10 : Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text("No payment history found.",
+                      style: TextStyle(color: isDark ? Colors.white38 : Colors.black45)),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              var doc = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+
+              // Formatting the Firestore Timestamp
+              Timestamp? ts = doc['timestamp'] as Timestamp?;
+              DateTime dateTime = ts?.toDate() ?? DateTime.now();
+              String timeStr = "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+              String dateStr = "${dateTime.day}/${dateTime.month}/${dateTime.year}";
+
+              // Checking if still active for UI feedback
+              DateTime expiry = DateTime.parse(doc['expiry'] ?? DateTime.now().toIso8601String());
+              bool isActive = DateTime.now().isBefore(expiry);
+
+              return _historyItem(
+                context,
+                doc['title'] ?? "Signal Pass",
+                isActive ? "Access: Active" : "Access: Expired",
+                doc['amount'] ?? "₹20.00",
+                "$dateStr • $timeStr",
+                isActive, // Use color to show if the pass is still active
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  Widget _historyItem(BuildContext context, String title, String sub, String amount, String time, bool isCredit) {
+  Widget _historyItem(BuildContext context, String title, String sub, String amount, String time, bool isActive) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -38,28 +86,39 @@ class UserHistoryPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161B22) : Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: isDark ? Border.all(color: isActive ? Colors.cyanAccent.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.05)) : null,
         boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
       ),
       child: Row(
         children: [
-          Icon(
-            isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-            color: isCredit ? Colors.greenAccent : Colors.redAccent,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isActive ? Icons.bolt_rounded : Icons.timer_off_rounded,
+              color: isActive ? Colors.greenAccent : Colors.redAccent,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
-                Text(sub, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
+                const SizedBox(height: 4),
+                Text(sub, style: TextStyle(color: isActive ? Colors.greenAccent : Colors.grey, fontSize: 12, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(amount, style: TextStyle(color: isCredit ? Colors.greenAccent : (isDark ? Colors.white : Colors.black), fontWeight: FontWeight.bold)),
+              Text(amount, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 4),
               Text(time, style: const TextStyle(color: Colors.grey, fontSize: 11)),
             ],
           ),
@@ -104,7 +163,7 @@ class UserSettingsPage extends StatelessWidget {
                 secondary: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.1),
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, 
@@ -116,7 +175,7 @@ class UserSettingsPage extends StatelessWidget {
                 onChanged: (bool value) {
                   ThemeService().toggleTheme();
                 },
-                activeColor: Colors.cyanAccent,
+                activeThumbColor: Colors.cyanAccent,
               );
             },
           ),
@@ -129,7 +188,7 @@ class UserSettingsPage extends StatelessWidget {
               icon: const Icon(Icons.logout_rounded, color: Colors.white),
               label: const Text("Sign Out", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent.withOpacity(0.1),
+                backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
                 foregroundColor: Colors.redAccent,
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -144,25 +203,27 @@ class UserSettingsPage extends StatelessWidget {
 
   Widget _buildProfileHeader(BuildContext context, User? user) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-            child: const Icon(Icons.person, size: 50, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            user?.displayName ?? "User Account",
-            style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            user?.email ?? "",
-            style: const TextStyle(color: Colors.grey, fontSize: 14),
-          ),
-        ],
-      ),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(user?.uid).snapshots(),
+      builder: (context, snapshot) {
+        String name = "User Account";
+        String bio = "Stock Market Enthusiast";
+
+        if (snapshot.hasData && snapshot.data!.exists) {
+          name = snapshot.data!['name'] ?? name;
+          bio = snapshot.data!['bio'] ?? bio;
+        }
+
+        return Column(
+          children: [
+            const CircleAvatar(radius: 50, /* ... icon ... */),
+            const SizedBox(height: 16),
+            Text(name, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(bio, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            Text(user?.email ?? "", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        );
+      },
     );
   }
 
@@ -184,7 +245,7 @@ class UserSettingsPage extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.1),
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueAccent.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: isDark ? Colors.white70 : Colors.blueAccent, size: 22),

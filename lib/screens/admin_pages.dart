@@ -6,6 +6,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ShareHistoryPage extends StatelessWidget {
   const ShareHistoryPage({super.key});
 
+  void _createFirstSignal() {
+    FirebaseFirestore.instance.collection('signals').add({
+      "name": "NIFTY 50",
+      "description": "Initial signal entry for testing.",
+      "date": "25 April 2026",
+      "timestamp": FieldValue.serverTimestamp(), // This creates the sorting order
+    }).then((value) {
+      print("Signal Created! Check your Firestore Console now.");
+    }).catchError((error) {
+      print("Failed to add signal: $error");
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -17,17 +30,22 @@ class ShareHistoryPage extends StatelessWidget {
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       ),
-      body: ValueListenableBuilder<List<Map<String, String>>>(
-        valueListenable: ShareDataService().shares,
-        builder: (context, shares, _) {
-          if (shares.isEmpty) {
-            return Center(child: Text("No shares added yet.", style: TextStyle(color: isDark ? Colors.grey : Colors.black54)));
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('signals').orderBy('timestamp', descending: true).snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text("No signals added yet.", style: TextStyle(color: isDark ? Colors.grey : Colors.black54)));
           }
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: shares.length,
+            itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              final share = shares[index];
+              var doc = snapshot.data!.docs[index];
+              var signal = doc.data() as Map<String, dynamic>;
+              String id = doc.id;
+
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(20),
@@ -43,26 +61,28 @@ class ShareHistoryPage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(share["name"] ?? "N/A", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(signal["name"] ?? "N/A", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
                         Row(
                           children: [
                             IconButton(
                               icon: const Icon(Icons.edit, color: Colors.cyanAccent, size: 20),
-                              onPressed: () => _showEditDialog(context, share),
+                              onPressed: () => _showEditDialog(context, id, signal),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                              onPressed: () => ShareDataService().deleteShare(share["id"]!),
+                              onPressed: () => FirebaseFirestore.instance.collection('signals').doc(id).delete(),
                             ),
                           ],
                         ),
                       ],
                     ),
-                    Text(share["date"] ?? "", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(signal["date"] ?? "", style: const TextStyle(color: Colors.grey, fontSize: 12)),
                     const SizedBox(height: 16),
                     const Text("DESCRIPTION", style: TextStyle(color: Colors.grey, fontSize: 10, letterSpacing: 1.2)),
                     const SizedBox(height: 8),
-                    Text(share["description"] ?? "No description provided.", style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 14)),
+                    // Change line 70 to this:
+                    Text(signal["description"] ?? "No description provided.",
+                        style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 14)),
                   ],
                 ),
               );
@@ -73,9 +93,9 @@ class ShareHistoryPage extends StatelessWidget {
     );
   }
 
-  void _showEditDialog(BuildContext context, Map<String, String> share) {
-    final nameController = TextEditingController(text: share["name"]);
-    final descController = TextEditingController(text: share["description"]);
+  void _showEditDialog(BuildContext context, String docId, Map<String, dynamic> signalData) {
+    final nameController = TextEditingController(text: signalData["name"]);
+    final descController = TextEditingController(text: signalData["description"]);
 
     showDialog(
       context: context,
@@ -103,7 +123,7 @@ class ShareHistoryPage extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () {
-              ShareDataService().updateShare(share["id"]!, {
+              FirebaseFirestore.instance.collection('signals').doc(docId).update({
                 "name": nameController.text,
                 "description": descController.text,
               });
@@ -137,23 +157,23 @@ class PortfolioPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text("No user data found.", style: TextStyle(color: isDark ? Colors.grey : Colors.black54)));
+            return const Center(child: Text("No user data found."));
           }
-          
+
           return ListView.builder(
             padding: const EdgeInsets.all(20),
-            itemCount: snapshot.data!.docs.length,
+            itemCount: snapshot.data!.docs.length, // Added the count
             itemBuilder: (context, index) {
               var userData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               return _userHistoryItem(
                 context,
                 userData['fullName'] ?? "Unknown",
-                "\$${userData['portfolioValue']?.toString() ?? '0.0'}",
-                "${userData['profit']?.toString() ?? '0.0'}%"
+                "₹${userData['portfolioValue'] ?? '0.0'}",
+                "${userData['profit'] ?? '0.0'}%",
               );
             },
-          );
-        },
+          ); // Added the missing parenthesis and semicolon
+        }, // Added missing builder closing brace
       ),
     );
   }
@@ -289,7 +309,21 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text("SAVE", style: TextStyle(color: isDark ? Colors.blueAccent : Colors.blue))),
+          TextButton(
+              onPressed: () async {
+                await FirebaseFirestore.instance.collection('admin').doc('settings').set({
+                  'display_name': _nameController.text,
+                  'email': _emailController.text,
+                  'last_updated': FieldValue.serverTimestamp(),
+                }, SetOptions(merge: true));
+
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Admin profile updated!")));
+                }
+              },
+              child: Text("SAVE", style: TextStyle(color: isDark ? Colors.blueAccent : Colors.blue))
+          ),
         ],
       ),
       body: ListView(
