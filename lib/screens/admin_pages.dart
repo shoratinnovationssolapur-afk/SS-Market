@@ -12,7 +12,13 @@ class ShareHistoryPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
-        title: Text("Share Entry History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        title: Row(
+          children: [
+            Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
+            const SizedBox(width: 12),
+            Text("Share Entry History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+          ],
+        ),
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
@@ -125,7 +131,13 @@ class PortfolioPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
-        title: Text("User History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        title: Row(
+          children: [
+            Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
+            const SizedBox(width: 12),
+            Text("User History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+          ],
+        ),
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
@@ -195,7 +207,13 @@ class SettingsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
-        title: Text("Admin Settings", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        title: Row(
+          children: [
+            Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
+            const SizedBox(width: 12),
+            Text("Admin Settings", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+          ],
+        ),
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),

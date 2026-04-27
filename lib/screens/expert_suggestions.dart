@@ -16,7 +16,13 @@ class _ExpertSuggestionsPageState extends State<ExpertSuggestionsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
-        title: const Text("Expert Signals", style: TextStyle(color: Colors.white, fontSize: 20)),
+        title: Row(
+          children: [
+            Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
+            const SizedBox(width: 12),
+            const Text("Expert Signals", style: TextStyle(color: Colors.white, fontSize: 20)),
+          ],
+        ),
         backgroundColor: const Color(0xFF161B22),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),

@@ -12,7 +12,13 @@ class UserHistoryPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
-        title: Text("Transaction History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        title: Row(
+          children: [
+            Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
+            const SizedBox(width: 12),
+            Text("Transaction History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+          ],
+        ),
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
@@ -80,7 +86,13 @@ class UserSettingsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
-        title: Text("Settings", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        title: Row(
+          children: [
+            Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
+            const SizedBox(width: 12),
+            Text("Settings", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+          ],
+        ),
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),

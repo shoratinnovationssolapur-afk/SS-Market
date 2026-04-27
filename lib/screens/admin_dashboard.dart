@@ -19,8 +19,14 @@ class AdminDashboard extends StatelessWidget {
       appBar: isMobile
           ? AppBar(
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        title: Text("SS Market Admin",
-            style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.black)),
+        title: Row(
+          children: [
+            Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
+            const SizedBox(width: 8),
+            Text("SS Market Admin",
+                style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.black)),
+          ],
+        ),
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       )
@@ -237,11 +243,11 @@ class AdminDashboard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
+                  Image.asset('assets/logo_dark.png', height: 40, errorBuilder: (c, e, s) => Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(color: Colors.blueAccent, borderRadius: BorderRadius.circular(8)),
                     child: const Icon(Icons.analytics, color: Colors.white, size: 24),
-                  ),
+                  )),
                   const SizedBox(width: 12),
                       Text("SS Market", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
                 ],
@@ -304,6 +310,8 @@ class AdminDashboard extends StatelessWidget {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
+        Image.asset('assets/logo_dark.png', height: 35, errorBuilder: (c, e, s) => const Icon(Icons.admin_panel_settings, color: Colors.blueAccent)),
+        const SizedBox(width: 12),
         Text("Welcome, $name", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 24, fontWeight: FontWeight.bold)),
         const Spacer(),
         ElevatedButton.icon(

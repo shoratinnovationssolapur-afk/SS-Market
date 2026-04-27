@@ -56,10 +56,15 @@ class _UserDashboardState extends State<UserDashboard> {
       backgroundColor: isDark ? const Color(0xFF02101A) : Colors.grey[50],
       appBar: isMobile
           ? AppBar(
-
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        title: Text("SS Market",
-            style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.black)),
+        title: Row(
+          children: [
+            Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
+            const SizedBox(width: 8),
+            Text("SS Market",
+                style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.black)),
+          ],
+        ),
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       )
@@ -314,7 +319,7 @@ class _UserDashboardState extends State<UserDashboard> {
   Widget _buildSidebar(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     bool isMobile = MediaQuery.of(context).size.width < 1100;
-    
+
     Widget content = Container(
       width: 260,
       color: isDark ? const Color(0xFF161B22) : Colors.white,
@@ -323,7 +328,7 @@ class _UserDashboardState extends State<UserDashboard> {
         children: [
           Row(
             children: [
-              Icon(Icons.auto_graph, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 28),
+              Image.asset('assets/logo_dark.png', height: 40, errorBuilder: (c, e, s) => Icon(Icons.auto_graph, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 28)),
               const SizedBox(width: 12),
               Text("SS Market", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
             ],
@@ -383,6 +388,8 @@ class _UserDashboardState extends State<UserDashboard> {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
+        Image.asset('assets/logo_dark.png', height: 35, errorBuilder: (c, e, s) => const Icon(Icons.auto_graph, color: Colors.green)),
+        const SizedBox(width: 12),
         Text("User Panel", style: TextStyle(color: isDark ? Colors.grey : Colors.black45, fontSize: 14)),
         const Spacer(),
         Icon(Icons.search, color: isDark ? Colors.grey : Colors.black45),

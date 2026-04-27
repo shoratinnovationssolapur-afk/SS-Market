@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/theme_service.dart';
 import 'screens/get_started.dart';
-
+import 'screens/splash_screen.dart';
 import 'screens/user_dashboard.dart';
 
 
@@ -39,7 +39,7 @@ class MarketHubApp extends StatelessWidget {
               Theme.of(context).textTheme.apply(bodyColor: Colors.white),
             ),
           ),
-          home: const GetStartedScreen(),
+          home: const SplashScreen(),
         );
       },
     );
