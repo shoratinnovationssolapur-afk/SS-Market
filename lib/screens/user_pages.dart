@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/theme_service.dart';
 import 'login.dart';
 
@@ -8,10 +9,13 @@ class UserHistoryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
+
         title: Row(
           children: [
             Image.asset('assets/logo_dark.png', height: 30, errorBuilder: (c, e, s) => const SizedBox()),
@@ -19,19 +23,40 @@ class UserHistoryPage extends StatelessWidget {
             Text("Transaction History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
           ],
         ),
-        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        elevation: 0,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+
+
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _historyItem(context, "Expert Suggestions", "Daily Pass - ₹20", "-₹20.00", "Today, 10:45 AM", false),
-          _historyItem(context, "Deposit Funds", "Via UPI", "+₹5,000.00", "Yesterday, 03:20 PM", true),
-          _historyItem(context, "Buy NIFTY 50", "Lot Size: 50", "-₹18,420.00", "22 Oct, 11:15 AM", false),
-          _historyItem(context, "Sell TATAMOTORS", "10 Shares @ ₹950.12", "+₹9,501.20", "20 Oct, 09:30 AM", true),
-          _historyItem(context, "Withdrawal", "To Bank A/C", "-₹2,000.00", "18 Oct, 12:00 PM", false),
-        ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(user?.uid)
+            .collection('transactions')
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No transactions yet", style: TextStyle(color: Colors.grey)));
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              var doc = snapshot.data!.docs[index];
+              return _historyItem(
+                context,
+                doc['title'],
+                doc['subtitle'],
+                doc['amount'],
+                doc['dateString'], // or format doc['timestamp']
+                doc['isCredit'],
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -44,7 +69,7 @@ class UserHistoryPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161B22) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: Row(
         children: [
@@ -116,7 +141,7 @@ class UserSettingsPage extends StatelessWidget {
                 secondary: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.1),
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, 
@@ -128,7 +153,7 @@ class UserSettingsPage extends StatelessWidget {
                 onChanged: (bool value) {
                   ThemeService().toggleTheme();
                 },
-                activeColor: Colors.cyanAccent,
+                activeThumbColor: Colors.cyanAccent,
               );
             },
           ),
@@ -141,7 +166,7 @@ class UserSettingsPage extends StatelessWidget {
               icon: const Icon(Icons.logout_rounded, color: Colors.white),
               label: const Text("Sign Out", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent.withOpacity(0.1),
+                backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
                 foregroundColor: Colors.redAccent,
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -156,25 +181,27 @@ class UserSettingsPage extends StatelessWidget {
 
   Widget _buildProfileHeader(BuildContext context, User? user) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-            child: const Icon(Icons.person, size: 50, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            user?.displayName ?? "User Account",
-            style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            user?.email ?? "",
-            style: const TextStyle(color: Colors.grey, fontSize: 14),
-          ),
-        ],
-      ),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(user?.uid).snapshots(),
+      builder: (context, snapshot) {
+        String name = "User Account";
+        String bio = "Stock Market Enthusiast";
+
+        if (snapshot.hasData && snapshot.data!.exists) {
+          name = snapshot.data!['name'] ?? name;
+          bio = snapshot.data!['bio'] ?? bio;
+        }
+
+        return Column(
+          children: [
+            const CircleAvatar(radius: 50, /* ... icon ... */),
+            const SizedBox(height: 16),
+            Text(name, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(bio, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            Text(user?.email ?? "", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        );
+      },
     );
   }
 
@@ -196,7 +223,7 @@ class UserSettingsPage extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.1),
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueAccent.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: isDark ? Colors.white70 : Colors.blueAccent, size: 22),
