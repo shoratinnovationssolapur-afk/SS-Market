@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/subscription_service.dart';
 import '../services/share_data_service.dart';
+import '../services/billing_service.dart';
 
 class ExpertSuggestionsPage extends StatefulWidget {
   const ExpertSuggestionsPage({super.key});
@@ -74,28 +75,30 @@ class _ExpertSuggestionsPageState extends State<ExpertSuggestionsPage> {
                 const SizedBox(height: 8),
                 const Text("₹20.00", style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    SubscriptionService().subscribe();
-                    
-                    // Record the purchase for admin to see in history
-                    final user = FirebaseAuth.instance.currentUser;
-                    final userName = user?.displayName ?? user?.email ?? "Guest User";
-                    ShareDataService().recordPurchase(userName, "Expert Suggestions Daily Pass");
+    ElevatedButton(
+    onPressed: () async {
+    // ❌ REMOVE THIS: SubscriptionService().subscribe();
 
-                    setState(() {}); // Refresh view
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Payment Successful! Expert signals unlocked.")),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.cyanAccent,
-                    foregroundColor: Colors.black,
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text("Pay Now & Unlock", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
+    // ✅ DO THIS: Trigger the actual Google Play Billing flow
+    try {
+    await BillingService().buySignal();
+
+    // Note: We don't unlock here. The 'BillingService' listener
+    // will handle the unlock ONLY after Google confirms the UPI payment.
+    } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text("Billing Error: $e")),
+    );
+    }
+    },
+    style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.cyanAccent,
+    foregroundColor: Colors.black,
+    minimumSize: const Size(double.infinity, 56),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    child: const Text("Pay Now & Unlock", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+    ),
               ],
             ),
           ),
@@ -145,7 +148,7 @@ class _ExpertSuggestionsPageState extends State<ExpertSuggestionsPage> {
                     data["description"] ?? "",
                     data["date"] ?? "",
                   );
-                }).toList(),
+                }),
               ],
             ),
           );

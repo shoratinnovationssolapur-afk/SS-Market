@@ -1,8 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.ssmarket.app.ss_market"> <uses-permission android:name="android.permission.INTERNET" />
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.ssmarket.app.ss_market">
+
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="com.android.vending.BILLING" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
+
     <application
-        android:label="ss_market"
+        android:label="SS Market"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
@@ -29,6 +34,7 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false" />
     </application>
 
     <queries>

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:ss_market/services/subscription_service.dart';
 
 class BillingService {
   final InAppPurchase _iap = InAppPurchase.instance;
@@ -65,6 +66,10 @@ class BillingService {
 
           await batch.commit();
 
+          // Update local state so the signals unlock immediately without a restar
+
+          SubscriptionService().isSubscribed.value = true;
+          SubscriptionService().expiryTime.value = expiry;
           // Consume for Android so they can buy again tomorrow
           if (purchase is GooglePlayPurchaseDetails) {
             final androidAddition = _iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
@@ -77,9 +82,9 @@ class BillingService {
   }
 
   Future<bool> _verifyPurchase(PurchaseDetails purchase) async {
-    // For local testing, we return true.
-    // In production, verify the purchase.verificationData.serverVerificationData
-    return true;
+    // In production, you verify the purchase token.
+    // If the serverVerificationData is empty, the purchase might be spoofed.
+    return purchase.verificationData.serverVerificationData.isNotEmpty;
   }
 
   Future<void> buySignal() async {
