@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:ss_market/services/subscription_service.dart';
 
 class BillingService {
   final InAppPurchase _iap = InAppPurchase.instance;
@@ -24,53 +25,66 @@ class BillingService {
 
   Future<void> _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) async {
     for (var purchase in purchaseDetailsList) {
-      if (purchase.status == PurchaseStatus.pending) {
-        // Handle pending state (e.g., show a spinner)
-      } else if (purchase.status == PurchaseStatus.error) {
-        print("Purchase Error: ${purchase.error}");
-      } else if (purchase.status == PurchaseStatus.purchased ||
-          purchase.status == PurchaseStatus.restored) {
+      if (purchase.status == PurchaseStatus.purchased || purchase.status == PurchaseStatus.restored) {
 
-        bool deliver = await _verifyPurchase(purchase);
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final String uid = user.uid;
+          final String name = user.displayName ?? "User";
+          final String email = user.email ?? "N/A";
+          final DateTime now = DateTime.now();
+          final expiry = now.add(const Duration(hours: 24));
 
-        if (deliver) {
-          // ✅ FIX: Get the userId from FirebaseAuth
-          final String? userId = FirebaseAuth.instance.currentUser?.uid;
+          WriteBatch batch = FirebaseFirestore.instance.batch();
 
-          if (userId != null) {
-            // Save access for 24 hours
-            final expiryTime = DateTime.now().add(const Duration(hours: 24));
+          // 1. Update User Profile (24-hour access)
+          batch.update(FirebaseFirestore.instance.collection('users').doc(uid), {
+            'premium_expiry': expiry.toIso8601String(),
+          });
 
-            await FirebaseFirestore.instance.collection('users').doc(userId).update({
-              'premium_expiry': expiryTime.toIso8601String(),
-            });
+          // 2. Add to User's Personal Payment History
+          DocumentReference userRef = FirebaseFirestore.instance
+              .collection('users').doc(uid)
+              .collection('user_payments').doc();
+          batch.set(userRef, {
+            'title': "Daily Signal Pass",
+            'amount': "₹20.00",
+            'timestamp': FieldValue.serverTimestamp(),
+            'expiry': expiry.toIso8601String(),
+          });
 
-            print("Access granted to $userId until $expiryTime");
+          // 3. Add to Admin-side Master Payment History
+          DocumentReference adminRef = FirebaseFirestore.instance
+              .collection('admin_payments').doc();
+          batch.set(adminRef, {
+            'userName': name,
+            'userEmail': email,
+            'uid': uid,
+            'amount': 20,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
 
-            // ✅ CRITICAL: Consume the purchase for Android
-            // This allows the user to buy the same product again tomorrow
-            if (purchase is GooglePlayPurchaseDetails) {
-              final InAppPurchaseAndroidPlatformAddition androidAddition =
-              _iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+          await batch.commit();
 
-              await androidAddition.consumePurchase(purchase);
-            }
-          } else {
-            print("Delivery failed: No user logged in.");
+          // Update local state so the signals unlock immediately without a restar
+
+          SubscriptionService().isSubscribed.value = true;
+          SubscriptionService().expiryTime.value = expiry;
+          // Consume for Android so they can buy again tomorrow
+          if (purchase is GooglePlayPurchaseDetails) {
+            final androidAddition = _iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+            await androidAddition.consumePurchase(purchase);
           }
         }
-
-        if (purchase.pendingCompletePurchase) {
-          await _iap.completePurchase(purchase);
-        }
+        if (purchase.pendingCompletePurchase) await _iap.completePurchase(purchase);
       }
     }
   }
 
   Future<bool> _verifyPurchase(PurchaseDetails purchase) async {
-    // For local testing, we return true.
-    // In production, verify the purchase.verificationData.serverVerificationData
-    return true;
+    // In production, you verify the purchase token.
+    // If the serverVerificationData is empty, the purchase might be spoofed.
+    return purchase.verificationData.serverVerificationData.isNotEmpty;
   }
 
   Future<void> buySignal() async {

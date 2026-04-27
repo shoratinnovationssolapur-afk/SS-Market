@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/theme_service.dart';
 import 'login.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserHistoryPage extends StatelessWidget {
   const UserHistoryPage({super.key});
@@ -15,7 +16,8 @@ class UserHistoryPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
-        title: Text("History", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        title: Text("Transaction History",
+            style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
@@ -24,29 +26,50 @@ class UserHistoryPage extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('users')
             .doc(user?.uid)
-            .collection('transactions')
+            .collection('user_payments')
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No transactions yet", style: TextStyle(color: Colors.grey)));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history_toggle_off_rounded, size: 64, color: isDark ? Colors.white10 : Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text("No payment history found.",
+                      style: TextStyle(color: isDark ? Colors.white38 : Colors.black45)),
+                ],
+              ),
+            );
           }
 
           return ListView.builder(
             padding: const EdgeInsets.all(20),
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              var doc = snapshot.data!.docs[index];
+              var doc = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+
+              // Formatting the Firestore Timestamp
+              Timestamp? ts = doc['timestamp'] as Timestamp?;
+              DateTime dateTime = ts?.toDate() ?? DateTime.now();
+              String timeStr = "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+              String dateStr = "${dateTime.day}/${dateTime.month}/${dateTime.year}";
+
+              // Checking if still active for UI feedback
+              DateTime expiry = DateTime.parse(doc['expiry'] ?? DateTime.now().toIso8601String());
+              bool isActive = DateTime.now().isBefore(expiry);
+
               return _historyItem(
                 context,
-                doc['title'],
-                doc['subtitle'],
-                doc['amount'],
-                doc['dateString'], // or format doc['timestamp']
-                doc['isCredit'],
+                doc['title'] ?? "Signal Pass",
+                isActive ? "Access: Active" : "Access: Expired",
+                doc['amount'] ?? "₹20.00",
+                "$dateStr • $timeStr",
+                isActive, // Use color to show if the pass is still active
               );
             },
           );
@@ -55,7 +78,7 @@ class UserHistoryPage extends StatelessWidget {
     );
   }
 
-  Widget _historyItem(BuildContext context, String title, String sub, String amount, String time, bool isCredit) {
+  Widget _historyItem(BuildContext context, String title, String sub, String amount, String time, bool isActive) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -63,28 +86,39 @@ class UserHistoryPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161B22) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+        border: isDark ? Border.all(color: isActive ? Colors.cyanAccent.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.05)) : null,
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
       ),
       child: Row(
         children: [
-          Icon(
-            isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-            color: isCredit ? Colors.greenAccent : Colors.redAccent,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isActive ? Icons.bolt_rounded : Icons.timer_off_rounded,
+              color: isActive ? Colors.greenAccent : Colors.redAccent,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
-                Text(sub, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
+                const SizedBox(height: 4),
+                Text(sub, style: TextStyle(color: isActive ? Colors.greenAccent : Colors.grey, fontSize: 12, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(amount, style: TextStyle(color: isCredit ? Colors.greenAccent : (isDark ? Colors.white : Colors.black), fontWeight: FontWeight.bold)),
+              Text(amount, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 4),
               Text(time, style: const TextStyle(color: Colors.grey, fontSize: 11)),
             ],
           ),
