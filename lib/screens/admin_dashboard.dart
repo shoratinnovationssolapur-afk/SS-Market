@@ -102,11 +102,14 @@ class AdminDashboard extends StatelessWidget {
                       var doc = snapshot.data!.docs[index];
                       var data = doc.data() as Map<String, dynamic>;
 
-                      return _buildAdminShareCard(context, {
-                        "name": data["name"] ?? "N/A",
-                        "date": "${data["date"]} at ${data["time"]} (By: ${data["createdBy"]})",
-                        "description": data["description"] ?? "",
-                      });
+                      return GestureDetector(
+                        onLongPress: () => _confirmDelete(context, doc.id), // ✅ Pass the Document ID
+                        child: _buildAdminShareCard(context, {
+                          "name": data["name"] ?? "N/A",
+                          "date": "${data["date"]} at ${data["time"]} (By: ${data["createdBy"]})",
+                          "description": data["description"] ?? "",
+                        }),
+                      );
                     },
                   );
                 },
@@ -119,6 +122,54 @@ class AdminDashboard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _confirmDelete(BuildContext context, String docId) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+        title: const Text("Delete Suggestion?"),
+        content: const Text("Are you sure you want to delete this share detail? This action cannot be undone."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _deleteShare(context, docId);
+              if (context.mounted) Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text("Delete", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteShare(BuildContext context, String docId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('share_details')
+          .doc(docId)
+          .delete();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Record deleted successfully")),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error deleting: $e")),
+        );
+      }
+    }
   }
 
   Widget _buildAdminShareCard(BuildContext context, Map<String, String> share) {
