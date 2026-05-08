@@ -246,13 +246,13 @@ class _UserDashboardState extends State<UserDashboard> {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Why Join Premium?", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        _highlightItem(context, Icons.verified_rounded, "High Accuracy Signals", "Verified trade ideas with precise entry/exit."),
-        _highlightItem(context, Icons.timer_rounded, "Real-time Updates", "Get notified immediately when a new signal is active."),
-        _highlightItem(context, Icons.security_rounded, "Risk Management", "Every suggestion comes with a calculated stop-loss."),
-      ],
+      // children: [
+      //   Text("Why Join Premium?", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
+      //   const SizedBox(height: 20),
+      //   _highlightItem(context, Icons.verified_rounded, "High Accuracy Signals", "Verified trade ideas with precise entry/exit."),
+      //   _highlightItem(context, Icons.timer_rounded, "Real-time Updates", "Get notified immediately when a new signal is active."),
+      //   _highlightItem(context, Icons.security_rounded, "Risk Management", "Every suggestion comes with a calculated stop-loss."),
+      // ],
     );
   }
 
@@ -347,7 +347,7 @@ class _UserDashboardState extends State<UserDashboard> {
   Widget _buildSidebar(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     bool isMobile = MediaQuery.of(context).size.width < 1100;
-    
+
     Widget content = Container(
       width: 260,
       color: isDark ? const Color(0xFF161B22) : Colors.white,
