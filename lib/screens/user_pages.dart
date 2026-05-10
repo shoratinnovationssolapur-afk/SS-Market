@@ -206,17 +206,28 @@ class UserSettingsPage extends StatelessWidget {
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance.collection('users').doc(user?.uid).snapshots(),
       builder: (context, snapshot) {
+        // Default values
         String name = "User Account";
         String bio = "Stock Market Enthusiast";
 
         if (snapshot.hasData && snapshot.data!.exists) {
-          name = snapshot.data!['name'] ?? name;
-          bio = snapshot.data!['bio'] ?? bio;
+          // Convert to Map to use containsKey or safe access
+          var data = snapshot.data!.data() as Map<String, dynamic>?;
+
+          if (data != null) {
+            // Use 'fullName' because that is what is in your Firestore
+            name = data['fullName'] ?? name;
+            bio = data['bio'] ?? bio;
+          }
         }
 
         return Column(
           children: [
-            const CircleAvatar(radius: 50, /* ... icon ... */),
+            CircleAvatar(
+              radius: 50,
+              backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+              child: Icon(Icons.person, size: 50, color: isDark ? Colors.white38 : Colors.grey),
+            ),
             const SizedBox(height: 16),
             Text(name, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
             Text(bio, style: const TextStyle(color: Colors.grey, fontSize: 13)),

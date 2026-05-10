@@ -162,17 +162,23 @@ class PortfolioPage extends StatelessWidget {
 
           return ListView.builder(
             padding: const EdgeInsets.all(20),
-            itemCount: snapshot.data!.docs.length, // Added the count
+            itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               var userData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+
+              // Safely convert double to String for display
+              String name = userData['fullName'] ?? "Unknown";
+              String portfolio = userData['portfolioValue']?.toString() ?? "0";
+              String profit = userData['profit']?.toString() ?? "0";
+
               return _userHistoryItem(
                 context,
-                userData['fullName'] ?? "Unknown",
-                "₹${userData['portfolioValue'] ?? '0.0'}",
-                "${userData['profit'] ?? '0.0'}%",
+                name,
+                "₹$portfolio",
+                "$profit%",
               );
             },
-          ); // Added the missing parenthesis and semicolon
+          );// Added the missing parenthesis and semicolon
         }, // Added missing builder closing brace
       ),
     );
@@ -296,12 +302,59 @@ class AdminEditProfilePage extends StatefulWidget {
 }
 
 class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
-  final _nameController = TextEditingController(text: "Admin Master");
-  final _emailController = TextEditingController(text: "admin@capitalia.com");
+  // Controllers start empty
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _loadAdminData(); // Fetch real data on start
+  }
+
+  // Method to fetch data from Firestore
+  Future<void> _loadAdminData() async {
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('admin')
+          .doc('settings')
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        setState(() {
+          _nameController.text = data['display_name'] ?? "Samarth Hatte";
+          _emailController.text = data['email'] ?? "samarthhatte11@gmail.com";
+          _isLoading = false;
+        });
+      } else {
+        // Fallback if no doc exists yet
+        setState(() {
+          _nameController.text = "Samarth Hatte";
+          _emailController.text = "samarthhatte11@gmail.com";
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error loading admin data: $e");
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
@@ -309,31 +362,36 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         actions: [
-          TextButton(
-              onPressed: () async {
-                await FirebaseFirestore.instance.collection('admin').doc('settings').set({
-                  'display_name': _nameController.text,
-                  'email': _emailController.text,
-                  'last_updated': FieldValue.serverTimestamp(),
-                }, SetOptions(merge: true));
+          if (!_isLoading)
+            TextButton(
+                onPressed: () async {
+                  await FirebaseFirestore.instance.collection('admin').doc('settings').set({
+                    'display_name': _nameController.text,
+                    'email': _emailController.text,
+                    'last_updated': FieldValue.serverTimestamp(),
+                  }, SetOptions(merge: true));
 
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Admin profile updated!")));
-                }
-              },
-              child: Text("SAVE", style: TextStyle(color: isDark ? Colors.blueAccent : Colors.blue))
-          ),
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Admin profile updated!"))
+                    );
+                  }
+                },
+                child: Text("SAVE", style: TextStyle(color: isDark ? Colors.blueAccent : Colors.blue))
+            ),
         ],
       ),
-      body: ListView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
         padding: const EdgeInsets.all(24),
         children: [
           Center(
             child: CircleAvatar(
-              radius: 50, 
-              backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white, 
-              child: Icon(Icons.admin_panel_settings, size: 50, color: isDark ? Colors.blueAccent : Colors.blue)
+                radius: 50,
+                backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+                child: Icon(Icons.admin_panel_settings, size: 50, color: isDark ? Colors.blueAccent : Colors.blue)
             ),
           ),
           const SizedBox(height: 32),
