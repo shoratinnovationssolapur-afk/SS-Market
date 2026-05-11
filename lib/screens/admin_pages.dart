@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/share_data_service.dart';
 import '../services/theme_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ShareHistoryPage extends StatelessWidget {
   const ShareHistoryPage({super.key});
@@ -52,8 +53,8 @@ class ShareHistoryPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF161B22) : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: isDark ? Border.all(color: Colors.white.withOpacity(0.05)) : null,
-                  boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                  border: isDark ? Border.all(color: Colors.white.withValues(alpha: 0.05)) : null,
+                  boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,7 +187,7 @@ class PortfolioPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161B22) : Colors.white, 
         borderRadius: BorderRadius.circular(16),
-        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -235,7 +236,7 @@ class SettingsPage extends StatelessWidget {
                 secondary: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.1),
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, 
@@ -276,7 +277,7 @@ class SettingsPage extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.1),
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueAccent.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: isDark ? Colors.white70 : Colors.blueAccent, size: 22),
@@ -296,8 +297,36 @@ class AdminEditProfilePage extends StatefulWidget {
 }
 
 class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
-  final _nameController = TextEditingController(text: "Admin Master");
-  final _emailController = TextEditingController(text: "admin@capitalia.com");
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    _nameController = TextEditingController(text: user?.displayName ?? "Admin");
+    _emailController = TextEditingController(text: user?.email ?? "");
+    _fetchAdminData();
+  }
+
+  Future<void> _fetchAdminData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _nameController.text = doc.get('fullName') ?? _nameController.text;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -311,15 +340,17 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
         actions: [
           TextButton(
               onPressed: () async {
-                await FirebaseFirestore.instance.collection('admin').doc('settings').set({
-                  'display_name': _nameController.text,
-                  'email': _emailController.text,
-                  'last_updated': FieldValue.serverTimestamp(),
-                }, SetOptions(merge: true));
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  await user.updateDisplayName(_nameController.text);
+                  await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+                    'fullName': _nameController.text,
+                  }, SetOptions(merge: true));
 
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Admin profile updated!")));
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Admin profile updated!")));
+                  }
                 }
               },
               child: Text("SAVE", style: TextStyle(color: isDark ? Colors.blueAccent : Colors.blue))
@@ -336,9 +367,28 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
               child: Icon(Icons.admin_panel_settings, size: 50, color: isDark ? Colors.blueAccent : Colors.blue)
             ),
           ),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              _emailController.text,
+              style: const TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ),
           const SizedBox(height: 32),
           _buildTextField(context, "Display Name", _nameController),
-          _buildTextField(context, "Email Address", _emailController),
+          // Email field is read-only
+          TextField(
+            controller: _emailController,
+            enabled: false,
+            style: TextStyle(color: isDark ? Colors.white54 : Colors.black54),
+            decoration: InputDecoration(
+              labelText: "Login Email",
+              labelStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[200],
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            ),
+          ),
         ],
       ),
     );

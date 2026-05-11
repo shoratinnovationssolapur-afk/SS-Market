@@ -182,9 +182,9 @@ class _UserDashboardState extends State<UserDashboard> {
         ),
         const SizedBox(height: 16),
         StreamBuilder<QuerySnapshot>(
-          // ✅ Ensure this matches the collection name in your AdminDashboard
+          // Unifying with Admin collection
           stream: FirebaseFirestore.instance
-              .collection('signals')
+              .collection('share_details')
               .orderBy('timestamp', descending: true)
               .snapshots(),
           builder: (context, snapshot) {
@@ -198,7 +198,7 @@ class _UserDashboardState extends State<UserDashboard> {
             return ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: snapshot.data!.docs.length,
+              itemCount: snapshot.data!.docs.length > 3 ? 3 : snapshot.data!.docs.length, // Show only top 3 on dashboard
               itemBuilder: (context, index) {
                 final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
                 return _buildSuggestionCard(context, {
@@ -216,27 +216,60 @@ class _UserDashboardState extends State<UserDashboard> {
 
   Widget _buildSuggestionCard(BuildContext context, Map<String, String> share) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF161B22) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.cyanAccent.withOpacity(0.1) : Colors.blueAccent.withOpacity(0.1)),
-        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+    return GestureDetector(
+      onTap: () => _showFullSuggestion(context, share["name"] ?? "N/A", share["description"] ?? ""),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF161B22) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDark ? Colors.cyanAccent.withOpacity(0.1) : Colors.blueAccent.withOpacity(0.1)),
+          boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(share["name"] ?? "N/A", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(share["date"] ?? "", style: const TextStyle(color: Colors.grey, fontSize: 11)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              share["description"] ?? "",
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Click to read more...",
+              style: TextStyle(color: isDark ? Colors.cyanAccent : Color(0xFF6C63FF), fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(share["name"] ?? "N/A", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(share["date"] ?? "", style: const TextStyle(color: Colors.grey, fontSize: 11)),
-            ],
+    );
+  }
+
+  void _showFullSuggestion(BuildContext context, String title, String description) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+        title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        content: SingleChildScrollView(
+          child: Text(description, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
           ),
-          const SizedBox(height: 8),
-          Text(share["description"] ?? "", style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 14)),
         ],
       ),
     );

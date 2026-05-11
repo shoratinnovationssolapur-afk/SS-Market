@@ -3,168 +3,127 @@ import 'package:flutter/material.dart';
 import 'admin_user_history.dart';
 import 'admin_pages.dart';
 import 'login.dart';
-import '../services/share_data_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class AdminDashboard extends StatelessWidget {
+class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    bool isMobile = MediaQuery.of(context).size.width < 1100;
-    final User? user = FirebaseAuth.instance.currentUser;
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
-      appBar: isMobile
-          ? AppBar(
-        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        title: Text("SS Market Admin",
-            style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.black)),
-        elevation: 0,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
-      )
-          : null,
-      drawer: isMobile ? _buildSidebar(context) : null,
-      body: Row(
-        children: [
-          if (!isMobile) _buildSidebar(context),
-          Expanded(
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 16 : 24, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!isMobile)
-                    _buildTopBar(context, user?.displayName ?? "Admin"),
-                  const SizedBox(height: 32),
+class _AdminDashboardState extends State<AdminDashboard> {
+  final TextEditingController _descriptionController = TextEditingController();
+  bool _isSaving = false;
+  String _adminName = "Admin";
+  String _adminEmail = "";
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Live Suggestions History",
-                          style: TextStyle(
-                              color: isDark ? Colors.white : Colors.black,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (isMobile)
-                        ElevatedButton.icon(
-                          onPressed: () => _showAddShareDialog(context),
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text("Add Share"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                // ✅ NEW: Listening to 'share_details' ordered by newest first
-                stream: FirebaseFirestore.instance
-                    .collection('share_details')
-                    .orderBy('timestamp', descending: true)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.analytics_outlined, color: isDark ? Colors.white10 : Colors.black12, size: 80),
-                          const SizedBox(height: 16),
-                          const Text("No share details found in cloud.", style: TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      var doc = snapshot.data!.docs[index];
-                      var data = doc.data() as Map<String, dynamic>;
-
-                      return GestureDetector(
-                        onLongPress: () => _confirmDelete(context, doc.id), // ✅ Pass the Document ID
-                        child: _buildAdminShareCard(context, {
-                          "name": data["name"] ?? "N/A",
-                          "date": "${data["date"]} at ${data["time"]} (By: ${data["createdBy"]})",
-                          "description": data["description"] ?? "",
-                        }),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _fetchAdminData();
   }
 
-  void _confirmDelete(BuildContext context, String docId) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        title: const Text("Delete Suggestion?"),
-        content: const Text("Are you sure you want to delete this share detail? This action cannot be undone."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await _deleteShare(context, docId);
-              if (context.mounted) Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text("Delete", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    super.dispose();
   }
 
-  Future<void> _deleteShare(BuildContext context, String docId) async {
+  Future<void> _fetchAdminData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Set initial values from Auth immediately
+        if (mounted) {
+          setState(() {
+            _adminEmail = user.email ?? "";
+            _adminName = user.displayName ?? "Admin";
+          });
+        }
+
+        // Fetch detailed admin info from Firestore 'users' collection
+        DocumentSnapshot adminDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (adminDoc.exists && mounted) {
+          setState(() {
+            _adminName = adminDoc.get('fullName') ?? user.displayName ?? "Admin";
+            _adminEmail = adminDoc.get('email') ?? user.email ?? _adminEmail;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching admin data: $e");
+    }
+  }
+
+  Future<void> _saveEntry() async {
+    if (_descriptionController.text.trim().isEmpty) return;
+
+    // Check line count limit (100 lines)
+    int lineCount = _descriptionController.text.split('\n').length;
+    if (lineCount > 100) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Suggestion cannot exceed 100 lines!"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      final DateTime now = DateTime.now();
+
+      await FirebaseFirestore.instance.collection('share_details').add({
+        "name": "Expert Suggestion",
+        "description": _descriptionController.text.trim(),
+        "date": "${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}",
+        "time": "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}",
+        "timestamp": FieldValue.serverTimestamp(),
+        "createdBy": _adminName,
+      });
+
+      _descriptionController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Data saved successfully ✅"),
+            backgroundColor: Color(0xFF333333),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: ${e.toString()}")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _deleteShare(String docId) async {
     try {
       await FirebaseFirestore.instance
           .collection('share_details')
           .doc(docId)
           .delete();
 
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Record deleted successfully")),
         );
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Error deleting: $e")),
         );
@@ -172,137 +131,268 @@ class AdminDashboard extends StatelessWidget {
     }
   }
 
-  Widget _buildAdminShareCard(BuildContext context, Map<String, String> share) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF161B22) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: isDark ? Border.all(color: Colors.white.withOpacity(0.05)) : null,
-        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(share["name"] ?? "N/A",
-              style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
-              overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 4),
-          Text(share["date"] ?? "",
-              style: const TextStyle(color: Colors.grey, fontSize: 12)),
-          const SizedBox(height: 16),
-          Text("EXPERT SUGGESTION",
-              style: TextStyle(
-                  color: isDark ? Colors.cyanAccent : Colors.blue,
-                  fontSize: 10,
-                  letterSpacing: 1.2,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(share["description"] ?? "No description provided.",
-              style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black87, fontSize: 14, height: 1.5)),
+  void _confirmDelete(BuildContext context, String docId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Suggestion?"),
+        content: const Text("Are you sure you want to delete this share detail?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _deleteShare(docId);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+            child: const Text("Delete", style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );
   }
 
-  void _showAddShareDialog(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
+    bool isMobile = MediaQuery.of(context).size.width < 1100;
 
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF7F8FC),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF52EBFF),
+        elevation: 0,
+        title: Text(
+          "Admin Panel - $_adminName",
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.black),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+          )
+        ],
+      ),
+      drawer: isMobile ? _buildSidebar(context) : null,
+      body: Row(
+        children: [
+          if (!isMobile) _buildSidebar(context),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- ADMIN PROFILE HEADER SECTION ---
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      margin: const EdgeInsets.only(bottom: 30),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF161B22) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 35,
+                            backgroundColor: const Color(0xFF362797).withValues(alpha: 0.1),
+                            child: Icon(Icons.admin_panel_settings_rounded, color: isDark ? Colors.white : const Color(
+                                0xFF362797), size: 35),
+                          ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _adminName,
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.alternate_email_rounded, size: 14, color: Colors.grey),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _adminEmail,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF161B22) : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.5)),
+                      ),
+                      child: TextField(
+                        controller: _descriptionController,
+                        maxLines: 5,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        decoration: const InputDecoration(
+                          labelText: "Enter Description",
+                          labelStyle: TextStyle(color: Colors.grey),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.all(15),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 25),
+                    _isSaving
+                        ? const CircularProgressIndicator(color: Color(0xFF4CAF50))
+                        : ElevatedButton(
+                            onPressed: _saveEntry,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4CAF50),
+                              minimumSize: const Size(180, 55),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              "Save",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF6C63FF),
+                              ),
+                            ),
+                          ),
+                    const SizedBox(height: 40),
+                    const Text(
+                      "Today's Entries",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('share_details')
+                          .orderBy('timestamp', descending: true)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return const Text("No entries found.", style: TextStyle(color: Colors.grey));
+                        }
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: snapshot.data!.docs.length,
+                          itemBuilder: (context, index) {
+                            var doc = snapshot.data!.docs[index];
+                            var data = doc.data() as Map<String, dynamic>;
+                            return GestureDetector(
+                              onLongPress: () => _confirmDelete(context, doc.id),
+                              onTap: () => _showFullSuggestion(context, data["description"] ?? ""),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 15),
+                                padding: const EdgeInsets.all(15),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF161B22) : const Color(0xFFF1F1F1),
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      data["description"] ?? "",
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "${data["date"]} ${data["time"]}",
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        Text(
+                                          "By: ${data["createdBy"] ?? "Admin"}",
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.blueAccent,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFullSuggestion(BuildContext context, String description) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-        title: Text("Add New Share", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildDialogField(context, "Share Name", Icons.business, nameController),
-            _buildDialogField(context, "Description", Icons.description, descController,
-                maxLines: 3),
-          ],
+        title: const Text("Full Suggestion"),
+        content: SingleChildScrollView(
+          child: Text(description, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isEmpty) return;
-
-              try {
-                final User? user = FirebaseAuth.instance.currentUser;
-                final DateTime now = DateTime.now();
-
-                print("Attempting to save to Firestore..."); // Debug log
-
-                await FirebaseFirestore.instance.collection('share_details').add({
-                  "name": nameController.text,
-                  "description": descController.text,
-                  "date": "${now.day}/${now.month}/${now.year}",
-                  "time": "${now.hour}:${now.minute.toString().padLeft(2, '0')}",
-                  "timestamp": FieldValue.serverTimestamp(),
-                  "createdBy": user?.displayName ?? "Admin",
-                  "adminUid": user?.uid,
-                  "type": "EXPERT SUGGESTION",
-                });
-
-                print("Save Successful!"); // Debug log
-
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Share published successfully!")),
-                  );
-                }
-              } catch (e) {
-                print("Firestore Error: $e"); // 👈 THIS WILL TELL YOU THE REAL PROBLEM
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Error: ${e.toString()}")),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-            child: const Text("Save Share", style: TextStyle(color: Colors.white)),
+            child: const Text("Close"),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDialogField(BuildContext context, String label, IconData icon, TextEditingController controller, {int maxLines = 1}) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextField(
-        controller: controller,
-        maxLines: maxLines,
-        style: TextStyle(color: isDark ? Colors.white : Colors.black),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: Icon(icon, color: Colors.blueAccent, size: 20),
-          filled: true,
-          fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.blueAccent),
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
       ),
     );
   }
@@ -321,16 +411,32 @@ class AdminDashboard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
+                  Image.asset('assets/logo_dark.png', height: 40, errorBuilder: (c, e, s) => Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(color: Colors.blueAccent, borderRadius: BorderRadius.circular(8)),
                     child: const Icon(Icons.analytics, color: Colors.white, size: 24),
-                  ),
+                  )),
                   const SizedBox(width: 12),
-                      Text("SS Market", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text("SS Market", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
                 ],
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 24),
+              // Profile Summary in Sidebar
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueAccent.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_adminName, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(_adminEmail, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
               _sidebarItem(context, Icons.dashboard_rounded, "Dashboard", isActive: true, onTap: () {
                 if (Navigator.of(context).canPop()) Navigator.pop(context);
               }),
@@ -347,12 +453,15 @@ class AdminDashboard extends StatelessWidget {
                 );
               }),
               const Spacer(),
-              _sidebarItem(context, Icons.logout_rounded, "Log out", onTap: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                      (route) => false,
-                );
+              _sidebarItem(context, Icons.logout_rounded, "Log out", onTap: () async {
+                await FirebaseAuth.instance.signOut();
+                if (mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        (route) => false,
+                  );
+                }
               }),
             ],
           ),
@@ -370,7 +479,7 @@ class AdminDashboard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isActive ? (isDark ? Colors.white.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.1)) : Colors.transparent,
+          color: isActive ? (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueAccent.withValues(alpha: 0.1)) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -381,29 +490,6 @@ class AdminDashboard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildTopBar(BuildContext context, String name) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Row(
-      children: [
-        Text("Welcome, $name", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 24, fontWeight: FontWeight.bold)),
-        const Spacer(),
-        ElevatedButton.icon(
-          onPressed: () => _showAddShareDialog(context),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text("Add Share"),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blueAccent,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        const SizedBox(width: 24),
-        const CircleAvatar(radius: 18, backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=admin')),
-      ],
     );
   }
 }

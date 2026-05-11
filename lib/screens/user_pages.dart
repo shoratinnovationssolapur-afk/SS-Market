@@ -210,8 +210,11 @@ class UserSettingsPage extends StatelessWidget {
         String bio = "Stock Market Enthusiast";
 
         if (snapshot.hasData && snapshot.data!.exists) {
-          name = snapshot.data!['name'] ?? name;
-          bio = snapshot.data!['bio'] ?? bio;
+          final data = snapshot.data!.data() as Map<String, dynamic>?;
+          if (data != null) {
+            name = data['fullName'] ?? name;
+            bio = data['bio'] ?? bio;
+          }
         }
 
         return Column(
@@ -275,7 +278,6 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _nameController;
-  late TextEditingController _phoneController;
   late TextEditingController _bioController;
 
   @override
@@ -283,14 +285,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.initState();
     final user = FirebaseAuth.instance.currentUser;
     _nameController = TextEditingController(text: user?.displayName ?? "");
-    _phoneController = TextEditingController(text: "+91 9876543210"); 
-    _bioController = TextEditingController(text: "Stock Market Enthusiast"); 
+    _bioController = TextEditingController(text: "");
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data != null) {
+          setState(() {
+            _nameController.text = data['fullName'] ?? user.displayName ?? "";
+            _bioController.text = data['bio'] ?? "";
+          });
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _phoneController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -307,9 +324,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile updated!")));
+            onPressed: () async {
+              final user = FirebaseAuth.instance.currentUser;
+              if (user != null) {
+                try {
+                  await user.updateDisplayName(_nameController.text);
+                  await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                    'fullName': _nameController.text,
+                    'bio': _bioController.text,
+                  });
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile updated!")));
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                }
+              }
             },
             child: Text("SAVE", style: TextStyle(color: isDark ? Colors.cyanAccent : Colors.blueAccent, fontWeight: FontWeight.bold)),
           ),
@@ -339,7 +370,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
             const SizedBox(height: 32),
             _buildEditField(context, "Full Name", _nameController),
-            _buildEditField(context, "Phone Number", _phoneController),
             _buildEditField(context, "Bio", _bioController, maxLines: 3),
           ],
         ),

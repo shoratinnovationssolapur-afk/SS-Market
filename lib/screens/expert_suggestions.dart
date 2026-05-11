@@ -201,28 +201,62 @@ class _ExpertSuggestionsPageState extends State<ExpertSuggestionsPage> {
   }
 
   Widget _buildSignalCard(String name, String description, String date) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: () => _showFullSuggestion(context, name, description),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF161B22),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                Text(date, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+              ],
+            ),
+            const Divider(height: 32, color: Colors.white10),
+            const Text("EXPERT SUGGESTION", style: TextStyle(color: Colors.cyanAccent, fontSize: 10, letterSpacing: 1.2, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Read Full Suggestion",
+              style: TextStyle(color: Colors.cyanAccent.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-              Text(date, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-            ],
+    );
+  }
+
+  void _showFullSuggestion(BuildContext context, String title, String description) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161B22),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: SingleChildScrollView(
+          child: Text(description, style: const TextStyle(color: Colors.white70, height: 1.5)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close", style: TextStyle(color: Colors.cyanAccent)),
           ),
-          const Divider(height: 32, color: Colors.white10),
-          const Text("EXPERT SUGGESTION", style: TextStyle(color: Colors.cyanAccent, fontSize: 10, letterSpacing: 1.2, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(description, style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5)),
         ],
       ),
     );
