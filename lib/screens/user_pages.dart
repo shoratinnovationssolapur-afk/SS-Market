@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/theme_service.dart';
 import 'login.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserHistoryPage extends StatelessWidget {
   const UserHistoryPage({super.key});
@@ -69,7 +68,7 @@ class UserHistoryPage extends StatelessWidget {
                 isActive ? "Access: Active" : "Access: Expired",
                 doc['amount'] ?? "₹20.00",
                 "$dateStr • $timeStr",
-                isActive, // Use color to show if the pass is still active
+                isActive,
               );
             },
           );
@@ -87,14 +86,14 @@ class UserHistoryPage extends StatelessWidget {
         color: isDark ? const Color(0xFF161B22) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: isDark ? Border.all(color: isActive ? Colors.cyanAccent.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.05)) : null,
-        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+              color: isActive ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -147,7 +146,6 @@ class UserSettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 20),
         children: [
-          // Profile Header
           _buildProfileHeader(context, user),
           const SizedBox(height: 32),
 
@@ -155,7 +153,7 @@ class UserSettingsPage extends StatelessWidget {
           _settingOption(context, "Edit Profile", Icons.person_outline_rounded, "Name, phone, and bio", onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const EditProfilePage()));
           }),
-          
+
           ValueListenableBuilder<ThemeMode>(
             valueListenable: ThemeService().themeMode,
             builder: (context, mode, _) {
@@ -166,7 +164,7 @@ class UserSettingsPage extends StatelessWidget {
                     color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, 
+                  child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
                       color: isDark ? Colors.white70 : Colors.blueAccent, size: 22),
                 ),
                 title: Text("Dark Mode", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16)),
@@ -204,30 +202,50 @@ class UserSettingsPage extends StatelessWidget {
   Widget _buildProfileHeader(BuildContext context, User? user) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').doc(user?.uid).snapshots(),
-      builder: (context, snapshot) {
-        String name = "User Account";
-        String bio = "Stock Market Enthusiast";
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(user?.uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          // Default values
+          String name = "User Account";
+          String bio = "Stock Market Enthusiast";
 
-        if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data() as Map<String, dynamic>?;
-          if (data != null) {
-            name = data['fullName'] ?? name;
-            bio = data['bio'] ?? bio;
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
           }
-        }
 
-        return Column(
-          children: [
-            const CircleAvatar(radius: 50, /* ... icon ... */),
-            const SizedBox(height: 16),
-            Text(name, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
-            Text(bio, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-            Text(user?.email ?? "", style: const TextStyle(color: Colors.grey, fontSize: 12)),
-          ],
-        );
-      },
-    );
+          if (snapshot.hasData && snapshot.data!.exists) {
+            final data = snapshot.data!.data() as Map<String, dynamic>?;
+            if (data != null) {
+              name = data['fullName'] ?? name;
+              bio = data['bio'] ?? bio;
+            }
+
+            return Column(
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+                  child: Icon(Icons.person, size: 50,
+                      color: isDark ? Colors.white38 : Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                Text(name, style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+                Text(bio,
+                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                Text(user?.email ?? "",
+                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            );
+          }
+
+          // Fallback return for StreamBuilder
+          return const Center(child: Icon(Icons.person, size: 50, color: Colors.grey));
+        });
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
@@ -264,7 +282,7 @@ class UserSettingsPage extends StatelessWidget {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
-      (route) => false,
+          (route) => false,
     );
   }
 }

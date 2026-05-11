@@ -1,24 +1,10 @@
 import 'package:flutter/material.dart';
-import '../services/share_data_service.dart';
 import '../services/theme_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ShareHistoryPage extends StatelessWidget {
   const ShareHistoryPage({super.key});
-
-  void _createFirstSignal() {
-    FirebaseFirestore.instance.collection('signals').add({
-      "name": "NIFTY 50",
-      "description": "Initial signal entry for testing.",
-      "date": "25 April 2026",
-      "timestamp": FieldValue.serverTimestamp(), // This creates the sorting order
-    }).then((value) {
-      print("Signal Created! Check your Firestore Console now.");
-    }).catchError((error) {
-      print("Failed to add signal: $error");
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +67,6 @@ class ShareHistoryPage extends StatelessWidget {
                     const SizedBox(height: 16),
                     const Text("DESCRIPTION", style: TextStyle(color: Colors.grey, fontSize: 10, letterSpacing: 1.2)),
                     const SizedBox(height: 8),
-                    // Change line 70 to this:
                     Text(signal["description"] ?? "No description provided.",
                         style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 14)),
                   ],
@@ -158,23 +143,28 @@ class PortfolioPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No user data found."));
+            return Center(child: Text("No user data found.", style: TextStyle(color: isDark ? Colors.grey : Colors.black54)));
           }
 
           return ListView.builder(
             padding: const EdgeInsets.all(20),
-            itemCount: snapshot.data!.docs.length, // Added the count
+            itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               var userData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+
+              String name = userData['fullName'] ?? "Unknown";
+              String portfolio = userData['portfolioValue']?.toString() ?? "0";
+              String profit = userData['profit']?.toString() ?? "0";
+
               return _userHistoryItem(
                 context,
-                userData['fullName'] ?? "Unknown",
-                "₹${userData['portfolioValue'] ?? '0.0'}",
-                "${userData['profit'] ?? '0.0'}%",
+                name,
+                "₹$portfolio",
+                "$profit%",
               );
             },
-          ); // Added the missing parenthesis and semicolon
-        }, // Added missing builder closing brace
+          );
+        },
       ),
     );
   }
@@ -248,7 +238,7 @@ class SettingsPage extends StatelessWidget {
                 onChanged: (bool value) {
                   ThemeService().toggleTheme();
                 },
-                activeColor: Colors.blueAccent,
+                activeThumbColor: Colors.cyanAccent,
               );
             },
           ),
@@ -299,25 +289,39 @@ class AdminEditProfilePage extends StatefulWidget {
 class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    final user = FirebaseAuth.instance.currentUser;
-    _nameController = TextEditingController(text: user?.displayName ?? "Admin");
-    _emailController = TextEditingController(text: user?.email ?? "");
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
     _fetchAdminData();
   }
 
   Future<void> _fetchAdminData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (doc.exists && mounted) {
-        setState(() {
-          _nameController.text = doc.get('fullName') ?? _nameController.text;
-        });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists && mounted) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          setState(() {
+            _nameController.text = data['fullName'] ?? user.displayName ?? "Admin";
+            _emailController.text = data['email'] ?? user.email ?? "";
+            _isLoading = false;
+          });
+        } else if (mounted) {
+           setState(() {
+            _nameController.text = user.displayName ?? "Admin";
+            _emailController.text = user.email ?? "";
+            _isLoading = false;
+          });
+        }
       }
+    } catch (e) {
+      debugPrint("Error fetching admin data: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -331,6 +335,7 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : Colors.grey[100],
       appBar: AppBar(
@@ -338,33 +343,40 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
         backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         actions: [
-          TextButton(
-              onPressed: () async {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user != null) {
-                  await user.updateDisplayName(_nameController.text);
-                  await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-                    'fullName': _nameController.text,
-                  }, SetOptions(merge: true));
+          if (!_isLoading)
+            TextButton(
+                onPressed: () async {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    try {
+                      await user.updateDisplayName(_nameController.text);
+                      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+                        'fullName': _nameController.text,
+                      }, SetOptions(merge: true));
 
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Admin profile updated!")));
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Admin profile updated!")));
+                      }
+                    } catch (e) {
+                      debugPrint("Error updating admin profile: $e");
+                    }
                   }
-                }
-              },
-              child: Text("SAVE", style: TextStyle(color: isDark ? Colors.blueAccent : Colors.blue))
-          ),
+                },
+                child: Text("SAVE", style: TextStyle(color: isDark ? Colors.blueAccent : Colors.blue))
+            ),
         ],
       ),
-      body: ListView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
         padding: const EdgeInsets.all(24),
         children: [
           Center(
             child: CircleAvatar(
-              radius: 50, 
-              backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white, 
-              child: Icon(Icons.admin_panel_settings, size: 50, color: isDark ? Colors.blueAccent : Colors.blue)
+                radius: 50,
+                backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+                child: Icon(Icons.admin_panel_settings, size: 50, color: isDark ? Colors.blueAccent : Colors.blue)
             ),
           ),
           const SizedBox(height: 16),
@@ -376,7 +388,6 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
           ),
           const SizedBox(height: 32),
           _buildTextField(context, "Display Name", _nameController),
-          // Email field is read-only
           TextField(
             controller: _emailController,
             enabled: false,

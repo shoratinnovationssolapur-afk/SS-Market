@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import '../services/auth.dart'; // 1. Import your AuthService
+import 'package:firebase_auth/firebase_auth.dart'; // Added for Reset logic
+import '../services/auth.dart';
 import 'user_dashboard.dart';
 import 'admin_dashboard.dart';
 import 'SignUpScreen.dart';
@@ -13,7 +14,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isObscure = true;
-  bool _isLoading = false; // Add loading state
+  bool _isLoading = false;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -24,7 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Updated Login Logic
   void _handleLogin() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
@@ -37,19 +37,14 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _isLoading = true);
-
-    // 1. Sign in via Firebase
     final user = await AuthService().signIn(email, password);
 
     if (!mounted) return;
 
     if (user != null) {
-      // 2. Fetch the user's role from Firestore
       String? role = await AuthService().getUserRole(user.uid);
-
       if (!mounted) return;
 
-      // 3. Navigate based on role
       if (role == 'admin') {
         Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
@@ -66,6 +61,67 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     }
+  }
+
+  // Logic to show Reset Password Dialog
+  void _showForgotPasswordDialog() {
+    final TextEditingController resetEmailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161B22),
+        title: const Text("Reset Password", style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Enter your email to receive a password reset link.",
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: resetEmailController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "Email Address",
+                hintStyle: const TextStyle(color: Colors.white38),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00D2FF))),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              String email = resetEmailController.text.trim();
+              if (email.isEmpty) return;
+
+              try {
+                await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Reset link sent! Check your inbox.")),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Error: ${e.toString()}")),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00D2FF)),
+            child: const Text("Send Link"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -120,7 +176,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => setState(() => _isObscure = !_isObscure),
                     ),
                   ),
-                  const SizedBox(height: 40),
+
+                  // UPDATED: Forgot Password Section
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _showForgotPasswordDialog,
+                      child: const Text(
+                        "Forgot Password?",
+                        style: TextStyle(color: Color(0xFF00D2FF), fontSize: 13),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20), // Reduced spacing slightly since Forgot Password takes room
                   _isLoading
                       ? const CircularProgressIndicator(color: Color(0xFF00D2FF))
                       : _buildLoginButton(context),
@@ -154,6 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // ... (Keep _buildGlassInput and _buildLoginButton as they were)
   Widget _buildGlassInput(String hint, IconData icon, {bool isPass = false, Widget? suffix, TextEditingController? controller}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
