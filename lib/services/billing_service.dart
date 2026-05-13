@@ -1,15 +1,15 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
-import 'package:ss_market/services/subscription_service.dart';
+import '../services/subscription_service.dart';
 
 class BillingService {
   final InAppPurchase _iap = InAppPurchase.instance;
   late StreamSubscription<List<PurchaseDetails>> _subscription;
 
-  // Corrected to match your Play Console ID
   static const String signalUnlockID = 'ss_market_premium_access';
 
   void initialize() {
@@ -19,7 +19,7 @@ class BillingService {
     }, onDone: () {
       _subscription.cancel();
     }, onError: (error) {
-      print("Billing Error: $error");
+      debugPrint("Billing Error: $error");
     });
   }
 
@@ -27,84 +27,70 @@ class BillingService {
     for (var purchase in purchaseDetailsList) {
       if (purchase.status == PurchaseStatus.purchased || purchase.status == PurchaseStatus.restored) {
 
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          final String uid = user.uid;
-          final String name = user.displayName ?? "User";
-          final String email = user.email ?? "N/A";
-          final DateTime now = DateTime.now();
-          final expiry = now.add(const Duration(hours: 24));
+        // This is the core logic that updates your database upon a successful test payment
+        await _recordPurchaseInFirestore();
 
-          WriteBatch batch = FirebaseFirestore.instance.batch();
-
-          // 1. Update User Profile (24-hour access)
-          batch.update(FirebaseFirestore.instance.collection('users').doc(uid), {
-            'premium_expiry': expiry.toIso8601String(),
-          });
-
-          // 2. Add to User's Personal Payment History
-          DocumentReference userRef = FirebaseFirestore.instance
-              .collection('users').doc(uid)
-              .collection('user_payments').doc();
-          batch.set(userRef, {
-            'title': "Daily Signal Pass",
-            'amount': "₹20.00",
-            'timestamp': FieldValue.serverTimestamp(),
-            'expiry': expiry.toIso8601String(),
-          });
-
-          // 3. Add to Admin-side Master Payment History
-          DocumentReference adminRef = FirebaseFirestore.instance
-              .collection('admin_payments').doc();
-          batch.set(adminRef, {
-            'userName': name,
-            'userEmail': email,
-            'uid': uid,
-            'amount': 20,
-            'timestamp': FieldValue.serverTimestamp(),
-          });
-
-          await batch.commit();
-
-          // Update local state so the signals unlock immediately without a restar
-
-          SubscriptionService().isSubscribed.value = true;
-          SubscriptionService().expiryTime.value = expiry;
-          // Consume for Android so they can buy again tomorrow
-          if (purchase is GooglePlayPurchaseDetails) {
-            final androidAddition = _iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
-            await androidAddition.consumePurchase(purchase);
-          }
+        if (purchase is GooglePlayPurchaseDetails) {
+          final androidAddition = _iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+          await androidAddition.consumePurchase(purchase);
         }
-        if (purchase.pendingCompletePurchase) await _iap.completePurchase(purchase);
+
+        if (purchase.pendingCompletePurchase) {
+          await _iap.completePurchase(purchase);
+        }
       }
     }
   }
 
-  Future<bool> _verifyPurchase(PurchaseDetails purchase) async {
-    // In production, you verify the purchase token.
-    // If the serverVerificationData is empty, the purchase might be spoofed.
-    return purchase.verificationData.serverVerificationData.isNotEmpty;
+  // ✅ New helper to centralize Firestore updates
+  Future<void> _recordPurchaseInFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final String uid = user.uid;
+    final DateTime now = DateTime.now();
+    final expiry = now.add(const Duration(hours: 24));
+    final batch = FirebaseFirestore.instance.batch();
+
+    // 1. Update User Profile Expiry
+    batch.update(FirebaseFirestore.instance.collection('users').doc(uid), {
+      'premium_expiry': expiry.toIso8601String(),
+    });
+
+    // 2. Add to User History
+    batch.set(FirebaseFirestore.instance.collection('users').doc(uid).collection('user_payments').doc(), {
+      'title': "Daily Signal Pass",
+      'amount': "₹20.00",
+      'timestamp': FieldValue.serverTimestamp(),
+      'expiry': expiry.toIso8601String(),
+    });
+
+    // 3. Add to Admin Revenue History
+    batch.set(FirebaseFirestore.instance.collection('admin_payments').doc(), {
+      'userName': user.displayName ?? "Samarth Hatte",
+      'userEmail': user.email,
+      'uid': uid,
+      'amount': 20.0,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+
+    // Update UI immediately
+    SubscriptionService().isSubscribed.value = true;
+    SubscriptionService().expiryTime.value = expiry;
   }
 
   Future<void> buySignal() async {
     final bool available = await _iap.isAvailable();
-    if (!available) {
-      print("Store not available");
-      return;
-    }
+    if (!available) return;
 
-    const Set<String> _kIds = {signalUnlockID};
-    final ProductDetailsResponse response = await _iap.queryProductDetails(_kIds);
+    const Set<String> kIds = {signalUnlockID};
+    final ProductDetailsResponse response = await _iap.queryProductDetails(kIds);
 
     if (response.productDetails.isNotEmpty) {
-      final ProductDetails productDetails = response.productDetails.first;
-      final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
-
-      // ✅ Use buyConsumable for ₹20 daily tips
+      final PurchaseParam purchaseParam = PurchaseParam(productDetails: response.productDetails.first);
       _iap.buyConsumable(purchaseParam: purchaseParam);
-    } else {
-      print("Product $signalUnlockID not found in Play Store.");
     }
   }
 }
