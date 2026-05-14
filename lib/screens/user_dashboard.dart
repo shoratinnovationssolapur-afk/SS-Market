@@ -108,16 +108,31 @@ class _UserDashboardState extends State<UserDashboard> {
                     const SizedBox(height: 40),
 
                     // RESOLVED: Using ValueListenableBuilder for subscription logic
+                    // Replace the previous ValueListenableBuilder in your build method:
                     ValueListenableBuilder<bool>(
-                      valueListenable: SubscriptionService().isSubscribed,
-                      builder: (context, isSubscribed, _) {
-                        // Check for active subscription
-                        bool isValid = SubscriptionService().hasActiveSubscription;
-                        if (isValid) {
-                          return _buildPaidSuggestionsView(context);
-                        } else {
-                          return _buildExpertBanner(context);
+                      valueListenable: SubscriptionService().isChecking,
+                      builder: (context, isChecking, _) {
+                        // 1. Show a loader while checking the database
+                        if (isChecking) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(40.0),
+                              child: CircularProgressIndicator(color: Colors.cyanAccent),
+                            ),
+                          );
                         }
+
+                        // 2. Once checking is done, show the appropriate view
+                        return ValueListenableBuilder<bool>(
+                          valueListenable: SubscriptionService().isSubscribed,
+                          builder: (context, isSubscribed, _) {
+                            if (isSubscribed) {
+                              return _buildPaidSuggestionsView(context);
+                            } else {
+                              return _buildExpertBanner(context);
+                            }
+                          },
+                        );
                       },
                     ),
 
@@ -172,19 +187,10 @@ class _UserDashboardState extends State<UserDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text("Expert Suggestions",
-                style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 24, fontWeight: FontWeight.bold)),
-            _buildUnlockedBadge(),
-          ],
-        ),
-        const SizedBox(height: 16),
+        // ... (Keep your Header/Badge code)
         StreamBuilder<QuerySnapshot>(
-          // Unifying with Admin collection
           stream: FirebaseFirestore.instance
-              .collection('share_details')
+              .collection('share_details') // ✅ Verified collection name
               .orderBy('timestamp', descending: true)
               .snapshots(),
           builder: (context, snapshot) {
@@ -198,10 +204,11 @@ class _UserDashboardState extends State<UserDashboard> {
             return ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: snapshot.data!.docs.length > 3 ? 3 : snapshot.data!.docs.length, // Show only top 3 on dashboard
+              itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
                 final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
                 return _buildSuggestionCard(context, {
+                  // ✅ FIX 2: Ensure keys match the Admin's save logic
                   "name": data["name"] ?? "N/A",
                   "date": data["date"] ?? "",
                   "description": data["description"] ?? "",

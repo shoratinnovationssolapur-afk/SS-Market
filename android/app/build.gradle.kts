@@ -23,6 +23,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
     defaultConfig {
         applicationId = "com.ssmarket.app.ss_market"
         minSdk = flutter.minSdkVersion
@@ -54,7 +58,9 @@ android {
         }
     }
 }
-
+kotlin {
+    jvmToolchain(17)
+}
 flutter {
     source = "../.."
 }

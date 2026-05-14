@@ -53,8 +53,10 @@ class BillingService {
     final batch = FirebaseFirestore.instance.batch();
 
     // 1. Update User Profile Expiry
-    batch.update(FirebaseFirestore.instance.collection('users').doc(uid), {
+// Inside _recordPurchaseInFirestore() in billing_service.dart
+    batch.update(FirebaseFirestore.instance.collection('users').doc(user.uid), {
       'premium_expiry': expiry.toIso8601String(),
+      'hasActiveSubscription': true, // ✅ Add this to match your rules
     });
 
     // 2. Add to User History

@@ -7,8 +7,6 @@ import 'services//auth_gate.dart';
 
 import 'screens/user_dashboard.dart';
 
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -46,4 +44,3 @@ class MarketHubApp extends StatelessWidget {
     );
   }
 }
-
