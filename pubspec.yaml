@@ -1,7 +1,7 @@
 name: ss_market
 description: "Professional Share Market App"
 publish_to: 'none'
-version: 1.0.0+8
+version: 1.0.0+12
 
 environment:
   sdk: ^3.0.0
@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
   
   cupertino_icons: ^1.0.8
-
+  flutter_launcher_icons: ^0.14.4 # ✅
   firebase_core: ^4.7.0
   cloud_firestore: ^6.3.0
 
@@ -26,7 +26,14 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
 
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#0D1117" # Matches your app's background
+  adaptive_icon_foreground: "assets/icon/icon.png" # The logo part
+  # Optional: monochrome icon for Android 13+ themed icons
+  monochrome_icon: "assets/icon/icon.png"
+
 flutter:
   uses-material-design: true
-  assets:
-    - assets/logo_white.png.png

@@ -10,6 +10,8 @@ class SubscriptionService {
   // Observable state for subscription status
   final ValueNotifier<bool> isSubscribed = ValueNotifier<bool>(false);
   final ValueNotifier<DateTime?> expiryTime = ValueNotifier<DateTime?>(null);
+  // ✅ NEW: Track if the app is currently checking Firestore
+  final ValueNotifier<bool> isChecking = ValueNotifier<bool>(true);
 
   // Called after a successful payment
   void subscribe() {
@@ -36,11 +38,14 @@ class SubscriptionService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       isSubscribed.value = false;
+      isChecking.value = false; // ✅ Stop loading
       return;
     }
 
     try {
       // Fetch the latest expiry from Firestore
+      isChecking.value = true;
+
       DocumentSnapshot doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -64,6 +69,9 @@ class SubscriptionService {
     } catch (e) {
       debugPrint("Error checking subscription: $e");
       isSubscribed.value = false;
+    }finally {
+      // ✅ Stop loading regardless of success or failure
+      isChecking.value = false;
     }
   }
 
