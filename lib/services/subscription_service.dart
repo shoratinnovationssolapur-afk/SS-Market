@@ -59,11 +59,15 @@ class SubscriptionService {
           DateTime expiry = DateTime.parse(expiryStr);
           bool active = DateTime.now().isBefore(expiry);
 
-          // Update the UI state
-          isSubscribed.value = active;
-          if (active) expiryTime.value = expiry;
+          if (active) {
+            isSubscribed.value = true;
+            expiryTime.value = expiry;
+          } else {
+            // ✅ FIX: Clean out the old stale expiry date completely
+            reset();
+          }
         } else {
-          isSubscribed.value = false;
+          reset();
         }
       }
     } catch (e) {
